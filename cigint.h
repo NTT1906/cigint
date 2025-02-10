@@ -2,32 +2,39 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdint.h>
+
+#define u64 uint64_t
+#define u32 uint32_t
 typedef struct {
-	uint64_t hi;
-	uint64_t lo;
-} uint128_t;
-#define u128_zero (uint128_t) {0}
-#define uint128_len 39 /* floor(log10(pow(2,128) - 1)) + 1 = 39 */
+	u64 hi;
+	u64 lo;
+} u128;
 
-void print2(uint128_t num);
-void print10(uint128_t num);
-uint128_t from_u64(uint64_t num);
-uint128_t u128_and(uint128_t a, uint128_t b);
-uint128_t u128_or(uint128_t a, uint128_t b);
-uint128_t u128_xor(uint128_t a, uint128_t b);
-uint128_t u128_not(uint128_t a);
-uint128_t u128_shl(uint128_t num, uint8_t amnt);
-uint128_t u128_shr(uint128_t num, uint8_t amnt);
-int u128_eq(uint128_t a, uint128_t b);
-int u128_gt(uint128_t a, uint128_t b);
-int u128_ge(uint128_t a, uint128_t b);
-int is_zero(uint128_t num);
-uint128_t u128_add(uint128_t a, uint128_t b);
-uint128_t u128_sub(uint128_t a, uint128_t b);
-uint128_t u128_div(uint128_t a, uint128_t b);
-uint128_t u128_mod(uint128_t a, uint128_t b);
-uint128_t u128_neg(uint128_t num);
+#define U128_ZERO (u128) {0}
+#define U128_MAX_DIGITS 39 /* floor(log10(pow(2,128) - 1)) + 1 */
 
-void sprint10(uint128_t num, char buf[uint128_len + 1]);
-size_t slen(char *s);
+void u128_print2(u128 num);
+void u128_print10(u128 num);
+void i128_print10(u128 num);
+u128 u128_from_u64(uint64_t num);
+u128 u128_and(u128 a, u128 b);
+u128 u128_or(u128 a, u128 b);
+u128 u128_xor(u128 a, u128 b);
+u128 u128_not(u128 a);
+u128 u128_shl(u128 num, uint32_t amnt);
+u128 u128_shr(u128 num, uint32_t amnt);
+u32 u128_eq(u128 a, u128 b);
+u32 u128_gt(u128 a, u128 b);
+u32 u128_ge(u128 a, u128 b);
+u32 u128_eq0(u128 num);
+u128 u128_add(u128 a, u128 b);
+u128 u128_sub(u128 a, u128 b);
+u128 u128_div(u128 a, u128 b);
+u128 u128_mod(u128 a, u128 b);
+u128 u128_neg(u128 num);
+
+/*
+void u128_tostr(u128 num, char buf[U128_MAX_DIGITS + 1UL]);
+size_t slen(char *s, size_t max_len);
 void add(char *num1, char *num2);
+*/
