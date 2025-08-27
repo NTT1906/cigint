@@ -1,16 +1,16 @@
 #include <assert.h>
-#include <stddef.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 
 #ifndef CIGINT_N
-#define CIGINT_N 8
-#endif /* !CIGINT_N */
+	#define CIGINT_N 8
+#endif
 
 #ifdef __cplusplus
-#define sassert static_assert
+	#define sassert static_assert
 #else
-#define sassert _Static_assert
+	#define sassert _Static_assert
 #endif
 sassert(CIGINT_N > 1, "CIGINT_N > 1");
 
@@ -21,8 +21,12 @@ typedef struct Cigint {
   uint data[CIGINT_N];
 
 #ifdef __cplusplus
-  Cigint() { memset(this->data, 0, sizeof(this->data)); }
-  Cigint(const Cigint &rhs) { memcpy(this->data, rhs.data, sizeof(rhs.data)); }
+  Cigint() {
+	  memset(this->data, 0, sizeof(this->data));
+  }
+  Cigint(const Cigint &rhs) {
+	  memcpy(this->data, rhs.data, sizeof(rhs.data));
+  }
   Cigint &operator=(const Cigint &rhs) {
     memcpy(this->data, rhs.data, sizeof(rhs.data));
     return *this;
@@ -36,7 +40,7 @@ typedef struct Cigint {
 
 uint cigint_get_bit(Cigint a, uint pos);
 Cigint cigint_set_bit(Cigint a, uint pos, uint val);
-void cigint_print2(Cigint a);
+uint cigint_print2(Cigint a);
 Cigint cigint_and(Cigint lhs, Cigint rhs);
 Cigint cigint_or(Cigint lhs, Cigint rhs);
 Cigint cigint_xor(Cigint lhs, Cigint rhs);
@@ -54,31 +58,33 @@ Cigint cigint_div(Cigint lhs, Cigint rhs);
 Cigint cigint_mod(Cigint lhs, Cigint rhs);
 void cigint_divmod(Cigint lhs, Cigint rhs, Cigint *q, Cigint *r);
 uint cigint_print10(Cigint a);
+uint cigint_printf(const char *fmt, ...);
 
 #ifdef CIGINT_STRIP_PREFIX
-#define get_bit cigint_get_bit
-#define set_bit cigint_set_bit
-#define print2 cigint_print2
+	#define get_bit cigint_get_bit
+	#define set_bit cigint_set_bit
+	#define print2 cigint_print2
 
-/* not to be confused with C++ macros */
-#define cand cigint_and
-#define cor cigint_or
-#define cxor cigint_xor
-#define cnot cigint_not
+	/* not to be confused with C++ macros */
+	#define cand cigint_and
+	#define cor cigint_or
+	#define cxor cigint_xor
+	#define cnot cigint_not
 
-#define shl cigint_shl
-#define shr cigint_shr
-#define highest_order cigint_highest_order
-#define pow2 cigint_pow2
-#define cmp cigint_cmp
-#define is0 cigint_is0
-#define add cigint_add
-#define sub cigint_sub
-#define mul cigint_mul
-#define div cigint_div
-#define mod cigint_mod
-#define divmod cigint_divmod
-#define print10 cigint_print10
+	#define shl cigint_shl
+	#define shr cigint_shr
+	#define highest_order cigint_highest_order
+	#define pow2 cigint_pow2
+	#define cmp cigint_cmp
+	#define is0 cigint_is0
+	#define add cigint_add
+	#define sub cigint_sub
+	#define mul cigint_mul
+	#define div cigint_div
+	#define mod cigint_mod
+	#define divmod cigint_divmod
+	#define print10 cigint_print10
+	#define cprintf cigint_printf
 #endif
 
 #ifdef CIGINT_IMPLEMENTATION
@@ -135,37 +141,26 @@ uint cigint_get_bit(Cigint a, uint pos) {
   size_t data_index = CIGINT_N - 1 - pos / SIZEOF_UINT;
   return u1_get_bit(a.data[data_index], pos % SIZEOF_UINT);
 }
+
 Cigint cigint_set_bit(Cigint a, uint pos, uint val) {
   size_t data_index = CIGINT_N - 1 - pos / SIZEOF_UINT;
   a.data[data_index] = u1_set_bit(a.data[data_index], pos % SIZEOF_UINT, val);
   return a;
 }
 
-/* TODO: vprintf */
-void cigint_print2(Cigint a) {
-  printf("0b");
-  int is_leading_zero = 1;
-  size_t data_index = 0;
-  size_t data_bits_len = SIZEOF_UINT;
+uint cigint_print2(Cigint a) {
+  uint counter = printf("0b"), old_counter = counter;
+  int bit_index = highest_order(a) - 1;
 
-  while (data_index < CIGINT_N) {
-    int bit_index = data_bits_len;
-    while (bit_index-- > 0) {
-      int digit = u1_get_bit(a.data[data_index], bit_index);
-      if (is_leading_zero) {
-        if (digit == 1) {
-          is_leading_zero = 0;
-        } else {
-          continue;
-        }
-      }
-      printf("%d", digit);
-    }
-    data_index++;
+  while (bit_index >= 0) {
+	  int digit = get_bit(a, bit_index);
+	  counter += printf("%d", digit);
+	  bit_index--;
   }
-  if (is_leading_zero) {
-    printf("0");
+  if (counter == old_counter) {
+    counter += putchar('0');
   }
+  return counter;
 }
 
 Cigint cigint_and(Cigint lhs, Cigint rhs) {
@@ -391,17 +386,70 @@ uint cigint_print10(Cigint a) {
     return 0;
   }
 
-  Cigint modulo = {0}; /* TODO:: calculate power of 10 based on given length*/
+  Cigint modulo = {0}; /* TODO: calculate power of 10 based on given length*/
   int num_len = 3;
   modulo.data[CIGINT_N - 1] = 1000;
   Cigint r, q;
   cigint_divmod(a, modulo, &q, &r);
-  if (cigint_print10(q) == 0) {
-    printf("%u", r.data[CIGINT_N - 1]);
-  } else {
-    printf("%0*u", num_len, r.data[CIGINT_N - 1]);
+
+  uint counter = cigint_print10(q);
+  if (counter == 0) {
+    counter += printf("%u", r.data[CIGINT_N - 1]);
   }
-  return num_len;
+  else {
+    counter += printf("%0*u", num_len, r.data[CIGINT_N - 1]);
+  }
+  return counter;
+}
+
+uint cigint_printf(const char *fmt, ...) {
+	uint counter = 0;
+
+	va_list lst;
+	va_start(lst, fmt);
+	while (*fmt != '\0') {
+		switch (*fmt) {
+			case '%': {
+				fmt++;
+				if (*fmt == '%') {
+					putchar('%');
+					counter++;
+				}
+				else if (*fmt == 'C') {
+					if (*(fmt + 1) == 'b' || *(fmt + 1) == 'd') {
+						fmt++;
+						Cigint num = (Cigint) va_arg(lst, Cigint);
+						if (*fmt == 'b') {
+							counter += cigint_print2(num);
+						}
+						else {
+							counter += cigint_print10(num);
+						}
+					}
+				}
+				else if (*fmt == 'c') {
+					int ch = va_arg(lst, int);
+					counter += putchar(ch);
+				}
+				else if (*fmt == 'd' || *fmt == 'i') {
+					int num = va_arg(lst, int);
+					counter += printf("%d", num);
+				}
+				else if (*fmt == 's') {
+					char *str = (char*) va_arg(lst, char*);
+					counter += printf("%s", str);
+				}
+				break;
+			}
+			default: {
+				counter += putchar(*fmt);
+			}
+		}
+		fmt++;
+	}
+
+	va_end(lst);
+	return counter;
 }
 #endif
 
@@ -415,7 +463,7 @@ inline const Cigint &operator+=(Cigint &lhs, const Cigint &rhs) {
   return lhs;
 }
 
-/* TODO: find an ideal way when calcuate with uint*/
+/* TODO: find an ideal way when calculate with uint*/
 inline Cigint operator+(const Cigint &lhs, uint rhs) {
   return cigint_add(lhs, rhs);
 }
