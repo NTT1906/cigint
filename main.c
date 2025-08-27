@@ -1,29 +1,43 @@
+#define CIGINT_IMPLEMENTATION
+#define CIGINT_STRIP_PREFIX
+#define CIGINT_N 8
 #include "cigint.h"
 
 int main(void) {
-/*
-	u128 n = U128_ZERO;
-	assert(u128_eq0(n));
-	n = u128_add(n, u128_from_u64(1));
-	assert(!u128_eq0(n));
+  Cigint one = {0};
+  one.data[CIGINT_N - 1] = (1ul << 31) - 1;
+  print2(one);
+  printf("\n");
 
-	u128 t = u128_shl(u128_from_u64(1), 127);
-	u128_print10(t);
-	i128_print10(t);
-	u128_print2(t);
+  one = shl(one, 31);
+  print2(one);
+  printf("\n");
 
-	u128 neg1 = u128_neg(u128_from_u64(1));
-	i128_print10(neg1);
-	neg1 = u128_add(neg1, u128_from_u64(2));
-	i128_print10(neg1);
-*/
-	u128 a = U128_ZERO;
-	u128 b = u128_add(a, u128_from_u64(1));
-	for (u32 i = 0; i <= 180; i++) {
-		u128_print10(a);
-		u128 c = u128_add(a, b);
-		a = b;
-		b = c;
-	}
-	return 0;
+  one = shr(one, 31);
+  print2(one);
+  printf("\n");
+
+  Cigint two = {0};
+  two.data[CIGINT_N - 1] = 2;
+
+  print2(add(one, two));
+  printf("\n");
+
+  print2(sub(one, two));
+  printf("\n");
+
+  print10(mul(one, one));
+  printf("\n");
+
+  print2(div(one, two));
+  printf("\n");
+
+  Cigint twelve = {0}, four = {0};
+  twelve.data[CIGINT_N - 1] = 4;
+  four.data[CIGINT_N - 1] = 1000;
+  print2(div(twelve, four));
+  printf("\n");
+  print2(mod(twelve, four));
+  printf("\n");
+  return 0;
 }
