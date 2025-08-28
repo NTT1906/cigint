@@ -1,6 +1,6 @@
 #define CIGINT_IMPLEMENTATION
 #define CIGINT_STRIP_PREFIX
-#define CIGINT_N (4096/32)
+#define CIGINT_N (28000/32)
 #include "cigint.h"
 
 int main(void) {
@@ -22,10 +22,8 @@ int main(void) {
   cprintf("%Cd\n", mul(one, two));
   cprintf("%Cd\n", div(one, two));
 
-  Cigint copy_one = one;
-  for (int i = 0; i < 120; i++) {
-	  one = mul(one, copy_one);
-  }
+  one = pow(one, 100);
   cprintf("%Cd\n", one);
+
   return 0;
 }

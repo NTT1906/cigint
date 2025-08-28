@@ -54,6 +54,7 @@ int cigint_is0(Cigint a);
 Cigint cigint_add(Cigint lhs, Cigint rhs);
 Cigint cigint_sub(Cigint lhs, Cigint rhs);
 Cigint cigint_mul(Cigint lhs, Cigint rhs);
+Cigint cigint_pow(Cigint lhs, uint amnt);
 Cigint cigint_div(Cigint lhs, Cigint rhs);
 Cigint cigint_mod(Cigint lhs, Cigint rhs);
 void cigint_divmod(Cigint lhs, Cigint rhs, Cigint *q, Cigint *r);
@@ -80,6 +81,7 @@ uint cigint_printf(const char *fmt, ...);
 	#define add cigint_add
 	#define sub cigint_sub
 	#define mul cigint_mul
+	#define pow cigint_pow
 	#define div cigint_div
 	#define mod cigint_mod
 	#define divmod cigint_divmod
@@ -153,6 +155,7 @@ uint cigint_print2(Cigint a) {
   int bit_index = highest_order(a) - 1;
 
   while (bit_index >= 0) {
+	  /* TODO: use %2 */
 	  int digit = get_bit(a, bit_index);
 	  counter += printf("%d", digit);
 	  bit_index--;
@@ -306,6 +309,20 @@ Cigint cigint_mul(Cigint lhs, Cigint rhs) {
   return res;
 }
 
+Cigint cigint_pow(Cigint lhs, uint amnt) {
+  Cigint res = {0};
+  res.data[CIGINT_N - 1] = 1;
+  while (amnt > 0) {
+	if (amnt % 2 == 1) {
+		res = mul(res, lhs);
+	}
+
+	lhs = mul(lhs, lhs);
+	amnt /= 2;
+  }
+  return res;
+}
+
 Cigint cigint_div(Cigint lhs, Cigint rhs) {
   assert(!cigint_is0(rhs));
   int comp = cigint_cmp(lhs, rhs);
@@ -381,23 +398,56 @@ void cigint_divmod(Cigint lhs, Cigint rhs, Cigint *q, Cigint *r) {
   }
 }
 
+void cigint_sdivmod(Cigint lhs, uint rhs, Cigint *q, uint *r) {
+  assert(rhs != 0);
+  uint hord = cigint_highest_order(lhs);
+  if (hord < SIZEOF_UINT && lhs.data[CIGINT_N - 1] <= rhs) {
+    if (q != NULL) {
+      Cigint res = {0};
+      res.data[CIGINT_N - 1] = lhs.data[CIGINT_N - 1] == rhs;
+      *q = res;
+    }
+    if (r != NULL) {
+      *r = lhs.data[CIGINT_N - 1];
+    }
+    return;
+  }
+  Cigint quotient = {0};
+  uint remainder = 0;
+  int bit_index = hord - 1;
+  while (bit_index >= 0) {
+    remainder = remainder << 1;
+    remainder = u1_set_bit(remainder, 0, cigint_get_bit(lhs, bit_index));
+    if (remainder >= rhs) {
+      remainder -= rhs;
+      quotient = set_bit(quotient, bit_index, 1);
+    }
+    bit_index--;
+  }
+  if (q != NULL) {
+    *q = quotient;
+  }
+  if (r != NULL) {
+    *r = remainder;
+  }
+}
+
+/* TODO: stack overflow */
 uint cigint_print10(Cigint a) {
   if (cigint_is0(a)) {
     return 0;
   }
 
-  Cigint modulo = {0}; /* TODO: calculate power of 10 based on given length*/
-  int num_len = 3;
-  modulo.data[CIGINT_N - 1] = 1000;
-  Cigint r, q;
-  cigint_divmod(a, modulo, &q, &r);
+  Cigint q;
+  uint r;
+  cigint_sdivmod(a, 100000000, &q, &r);
 
   uint counter = cigint_print10(q);
   if (counter == 0) {
-    counter += printf("%u", r.data[CIGINT_N - 1]);
+    counter += printf("%u", r);
   }
   else {
-    counter += printf("%0*u", num_len, r.data[CIGINT_N - 1]);
+    counter += printf("%0*u", 8, r);
   }
   return counter;
 }
