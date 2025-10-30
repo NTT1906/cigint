@@ -184,15 +184,24 @@ static u32 u1_get_last_nbits(u32 num, u32 amnt) {
 	return num & ((1ul << amnt) - 1);
 }
 
-uint cigint_get_bit(Cigint a, uint pos) {
-	size_t data_index = CIGINT_N - 1 - pos / SIZEOF_UINT;
-	return u1_get_bit(a.data[data_index], pos % SIZEOF_UINT);
+static inline u32 cigint_get_bit_ref(const Cigint *a, u32 pos) {
+	assert(pos < CIGINT_N * SIZEOF_U32);
+	size_t data_index = CIGINT_N - 1 - pos / SIZEOF_U32;
+	return u1_get_bit(a->data[data_index], pos % SIZEOF_U32);
 }
 
-Cigint cigint_set_bit(Cigint a, uint pos, uint val) {
-	size_t data_index = CIGINT_N - 1 - pos / SIZEOF_UINT;
-	a.data[data_index] = u1_set_bit(a.data[data_index], pos % SIZEOF_UINT, val);
+inline u32 cigint_get_bit(CFREF(Cigint) a, u32 pos) {
+	return cigint_get_bit_ref(&a, pos);
+}
+
+static inline Cigint *cigint_set_bit_ref(Cigint *a, u32 pos, u32 val) {
+	assert(pos < CIGINT_N * SIZEOF_U32);
+	size_t data_index = CIGINT_N - 1 - pos / SIZEOF_U32;
+	a->data[data_index] = u1_set_bit(a->data[data_index], pos % SIZEOF_U32, val);
 	return a;
+}
+inline Cigint cigint_set_bit(Cigint a, u32 pos, u32 val) {
+	return *cigint_set_bit_ref(&a, pos, val);
 }
 
 uint cigint_print2(Cigint a) {
