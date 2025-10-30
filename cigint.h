@@ -214,11 +214,19 @@ uint cigint_print2(Cigint a) {
 		int digit = get_bit(a, bit_index);
 		counter += printf("%d", digit);
 		bit_index--;
+inline void cigint_bit_reverse_ref(Cigint *a) {
+	u32 *start = a->data;
+	u32 *end = a->data + CIGINT_N - 1;
+	while (start < end) {
+		u32 tmp = u1_bit_reverse(*start);
+		*start++ = u1_bit_reverse(*end);
+		*end-- = tmp;
 	}
 	if (counter == old_counter) {
 		counter += putchar('0');
+	if (CIGINT_N % 2 != 0) { // reverse the middle one if odd n
+		*start = u1_bit_reverse(*start);
 	}
-	return counter;
 }
 
 inline void cigint_bit_reverse_n_ref(Cigint *a, u32 n) {
