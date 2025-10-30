@@ -334,11 +334,10 @@ int cigint_is0(Cigint a) {
 	return 1;
 }
 
-Cigint cigint_add(Cigint lhs, Cigint rhs) {
-	while (!cigint_is0(rhs)) {
-		Cigint carry = cigint_and(lhs, rhs);
-		lhs = cigint_xor(lhs, rhs);
-		rhs = cigint_shl(carry, 1);
+inline int cigint_is0(CFREF(Cigint) a) {
+	return cigint_is0_ref(&a);
+}
+
 static inline void cigint_add_ref(Cigint *lhs, const Cigint *rhs) {
 	u64 sum = 0;
 	for (size_t i = CIGINT_N; i-- > 0;) {
@@ -372,11 +371,56 @@ Cigint cigint_mul(Cigint lhs, Cigint rhs) {
 	while (!cigint_is0(rhs)) {
 		if (u1_get_bit(rhs.data[CIGINT_N - 1], 0) == 1) {
 			res = cigint_add(res, lhs);
+// void cigint_mul_ref(Cigint *a, const Cigint *b) {
+// 	Cigint temp = CIGINT_ZERO();
+// 	u64 carry = 0;
+//
+// 	// Compute LSW-first into temp
+// 	for (size_t k = 0; k < CIGINT_N; ++k) {
+// 		u64 acc = carry;
+// 		for (size_t i = 0; i <= k; ++i) {
+// 			acc += (u64)a->data[CIGINT_N - 1 - i] * (u64)b->data[CIGINT_N - 1 - (k - i)];
+// 		}
+// 		temp.data[k] = (uint32_t)acc;
+// 		carry = acc >> 32;
+// 	}
+//
+// 	// Copy temp back to a->data in MSW-first order
+// 	for (size_t k = 0; k < CIGINT_N; ++k) {
+// 		a->data[CIGINT_N - 1 - k] = temp.data[k];
+// 	}
+// }
+
+static inline void cigint_mul_ref(Cigint *lhs, const Cigint *rhs) {
+	Cigint tmp = CIGINT_ZERO();
+	u64 carry = 0;
+
+	for (size_t k = 0; k < CIGINT_N; ++k) {
+		u64 acc = carry;
+		for (size_t i = 0; i <= k; ++i) {
+			acc += (u64) lhs->data[CIGINT_N - 1 - i] * (u64) rhs->data[CIGINT_N - 1 - (k - i)];
 		}
-		lhs = cigint_shl(lhs, 1);
-		rhs = cigint_shr(rhs, 1);
+		tmp.data[CIGINT_N - 1 - k] = (uint32_t) acc;
+		carry = acc >> SIZEOF_U32;
 	}
-	return res;
+	*lhs = tmp;
+}
+
+static inline void cigint_mul_refex(const Cigint *lhs, const Cigint *rhs, Cigint *res) {
+	u64 carry = 0;
+	for (size_t k = 0; k < CIGINT_N; ++k) {
+		u64 acc = carry;
+		for (size_t i = 0; i <= k; ++i) {
+			acc += (u64) lhs->data[CIGINT_N - 1 - i] * (u64) rhs->data[CIGINT_N - 1 - (k - i)];
+		}
+		res->data[CIGINT_N - 1 - k] = (uint32_t) acc;
+		carry = acc >> SIZEOF_U32;
+	}
+}
+
+inline Cigint cigint_mul(Cigint lhs, CFREF(Cigint) rhs) {
+	cigint_mul_ref(&lhs, &rhs);
+	return lhs;
 }
 
 Cigint cigint_pow(Cigint lhs, uint amnt) {
