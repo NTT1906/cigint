@@ -230,12 +230,25 @@ Cigint cigint_and(Cigint lhs, Cigint rhs) {
 	return lhs;
 }
 
-Cigint cigint_or(Cigint lhs, Cigint rhs) {
-	size_t i = 0;
-	while (i < CIGINT_N) {
-		lhs.data[i] |= rhs.data[i];
-		i++;
+/**
+ * @brief Performs a bitwise OR operation (lhs |= rhs) between two Cigint values.
+ * @param lhs Pointer to the left-hand operand; stores the result.
+ * @param rhs Pointer to the right-hand operand.
+ */
+inline void cigint_or_ref(Cigint *lhs, const Cigint *rhs) {
+	for (size_t i = 0; i < CIGINT_N; ++i) {
+		lhs->data[i] |= rhs->data[i];
 	}
+}
+
+/**
+ * @brief Returns the bitwise OR (r = lhs | rhs) of two Cigint values.
+ * This is a copy wrapper of ::cigint_or()
+ * @param lhs Left-hand operand (copied before modification).
+ * @param rhs Right-hand operand.
+ */
+inline Cigint cigint_or(Cigint lhs, CFREF(Cigint) rhs) {
+	cigint_or_ref(&lhs, &rhs);
 	return lhs;
 }
 
