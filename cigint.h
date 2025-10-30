@@ -577,65 +577,82 @@ inline u32 cigint_print2(CFREF(Cigint) a) {
 
 inline u32 cigint_print10(CFREF(Cigint) a) {
 	if (cigint_is0(a)) {
-		return 0;
+		putchar('0');
+		return 1;
+	}
+	u32 remainders[CIGINT_PRINT10_CHUNKS];
+	size_t count = 0;
+	Cigint q, n = a;
+	while (!cigint_is0(n)) {
+		u32 r;
+		cigint_sdivmod(n, 100000000U, &q, &r);
+		remainders[count++] = r;
+		n = q;
 	}
 
-	Cigint q;
-	uint r;
-	cigint_sdivmod(a, 100000000, &q, &r);
-
-	uint counter = cigint_print10(q);
-	if (counter == 0) {
-		counter += printf("%u", r);
-	}
-	else {
-		counter += printf("%0*u", 8, r);
+	u32 counter = 0;
+	counter += printf("%u", remainders[count - 1]);
+	for (size_t i = count - 1; i-- > 0;) {
+		counter += printf("%08u", remainders[i]);
 	}
 	return counter;
 }
 
-uint cigint_printf(const char *fmt, ...) {
-	uint counter = 0;
+static u32 cigint_print16_impl(CFREF(Cigint) a, int upper) {
+	u32 counter = 0;
+	counter += printf("0x");
+	size_t i = 0;
+	while (i < CIGINT_N && a.data[i] == 0u) ++i;
+	if (i == CIGINT_N) {
+		counter += putchar('0');
+		return counter;
+	}
+	counter += printf(upper ? "%X" : "%x", a.data[i]);
+	for (size_t j = i + 1; j < CIGINT_N; ++j) {
+		counter += printf(upper ? "%08X" : "%08x", a.data[j]);
+	}
+	return counter;
+}
 
+inline u32 cigint_print16(CFREF(Cigint) a)       { return cigint_print16_impl(a, 0); }
+inline u32 cigint_print16_upper(CFREF(Cigint) a) { return cigint_print16_impl(a, 1); }
+
+inline u32 cigint_printf(const char *fmt, ...) {
+	u32 counter = 0;
 	va_list lst;
 	va_start(lst, fmt);
 	while (*fmt != '\0') {
 		switch (*fmt) {
 			case '%': {
-						  fmt++;
-						  if (*fmt == '%') {
-							  putchar('%');
-							  counter++;
-						  }
-						  else if (*fmt == 'C') {
-							  if (*(fmt + 1) == 'b' || *(fmt + 1) == 'd') {
-								  fmt++;
-								  Cigint num = (Cigint) va_arg(lst, Cigint);
-								  if (*fmt == 'b') {
-									  counter += cigint_print2(num);
-								  }
-								  else {
-									  counter += cigint_print10(num);
-								  }
-							  }
-						  }
-						  else if (*fmt == 'c') {
-							  int ch = va_arg(lst, int);
-							  counter += putchar(ch);
-						  }
-						  else if (*fmt == 'd' || *fmt == 'i') {
-							  int num = va_arg(lst, int);
-							  counter += printf("%d", num);
-						  }
-						  else if (*fmt == 's') {
-							  char *str = (char*) va_arg(lst, char*);
-							  counter += printf("%s", str);
-						  }
-						  break;
-					  }
+				fmt++;
+				if (*fmt == '%') {
+					putchar('%');
+					counter++;
+				} else if (*fmt == 'C') {
+					char next = *(fmt + 1);
+					if (next == 'b' || next == 'd' || next == 'x' || next == 'X') {
+						fmt++;
+						Cigint num = va_arg(lst, Cigint);
+						if (*fmt == 'b')      counter += cigint_print2(num);
+						else if (*fmt == 'd') counter += cigint_print10(num);
+						else if (*fmt == 'x') counter += cigint_print16(num);
+						else                  counter += cigint_print16_upper(num); /* 'X' */
+					}
+				} else if (*fmt == 'c') {
+					int ch = va_arg(lst, int);
+					counter += putchar(ch);
+				} else if (*fmt == 'd' || *fmt == 'i') {
+					int num = va_arg(lst, int);
+					counter += printf("%d", num);
+				} else if (*fmt == 's') {
+					char *str = (char*) va_arg(lst, char*);
+					counter += printf("%s", str);
+				}
+				break;
+			}
 			default: {
-						 counter += putchar(*fmt);
-					 }
+				counter += putchar(*fmt);
+			}
 		}
 		fmt++;
 	}
