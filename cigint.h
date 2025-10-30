@@ -1,7 +1,19 @@
+#ifndef CIGINT_H
+#define CIGINT_H
+
+#ifdef __cplusplus
+#include <cassert>
+#include <cstdio>
+#include <cstdarg>
+#include <cstring>
+#include <cstdint>
+#else
 #include <assert.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdint.h>
+#endif
 
 #ifndef CIGINT_N
 #define CIGINT_N 8
@@ -557,4 +569,5 @@ inline bool operator>=(const Cigint &lhs, const Cigint &rhs) {
 inline bool operator<=(const Cigint &lhs, const Cigint &rhs) {
 	return cigint_cmp(lhs, rhs) <= 0;
 }
+#endif
 #endif
