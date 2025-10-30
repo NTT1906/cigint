@@ -239,98 +239,126 @@ Cigint cigint_or(Cigint lhs, Cigint rhs) {
 	return lhs;
 }
 
-Cigint cigint_xor(Cigint lhs, Cigint rhs) {
-	size_t i = 0;
-	while (i < CIGINT_N) {
-		lhs.data[i] ^= rhs.data[i];
-		i++;
-	}
-	return lhs;
+// TODO: Write doc
+inline void cigint_not_ref(Cigint *a) {
+	for (size_t i = 0; i < CIGINT_N; ++i)
+		a->data[i] = ~a->data[i];
 }
 
-Cigint cigint_not(Cigint a) {
-	size_t i = 0;
-	while (i < CIGINT_N) {
-		a.data[i] = ~a.data[i];
-		i++;
-	}
+// TODO: Write doc
+inline Cigint cigint_not(Cigint a) {
+	cigint_not_ref(&a);
 	return a;
 }
 
-Cigint cigint_shl(Cigint lhs, uint amnt) {
-	Cigint res = lhs;
-	size_t i = 0;
-	size_t offset = (amnt + SIZEOF_UINT - 1) / SIZEOF_UINT;
-	size_t rshift_amnt = SIZEOF_UINT - (amnt % SIZEOF_UINT);
-	while (i < CIGINT_N - offset) {
-		res.data[i] = u1_shl(lhs.data[i], amnt);
-		res.data[i] |= u1_shr(lhs.data[i + offset], rshift_amnt);
-		i++;
+/**
+ * @brief Performs a bitwise XOR operation (lhs ^= rhs) between two Cigint values.
+ * @param lhs Pointer to the left-hand operand; stores the result.
+ * @param rhs Pointer to the right-hand operand.
+ */
+inline void cigint_xor_ref(Cigint *lhs, const Cigint *rhs) {
+	for (size_t i = 0; i < CIGINT_N; ++i) {
+		lhs->data[i] ^= rhs->data[i];
 	}
-	while (i < CIGINT_N) {
-		res.data[i] = u1_shl(lhs.data[i], amnt);
-		i++;
-	}
-	return res;
 }
 
-Cigint cigint_shr(Cigint lhs, uint amnt) {
-	Cigint res = lhs;
-	size_t i = 0;
-	size_t offset = (amnt + SIZEOF_UINT - 1) / SIZEOF_UINT;
-	size_t bits_amnt = amnt % SIZEOF_UINT;
-	size_t lshift_amnt = SIZEOF_UINT - bits_amnt;
-	while (i < CIGINT_N - offset) {
-		res.data[CIGINT_N - 1 - i] = u1_shr(lhs.data[CIGINT_N - 1 - i], amnt);
-		uint last_bits =
-			u1_get_last_nbits(lhs.data[CIGINT_N - 1 - i - offset], bits_amnt);
-		res.data[CIGINT_N - 1 - i] |= u1_shl(last_bits, lshift_amnt);
-		i++;
-	}
-	while (i < CIGINT_N) {
-		res.data[CIGINT_N - 1 - i] = u1_shr(lhs.data[CIGINT_N - 1 - i], amnt);
-		i++;
-	}
-	return res;
+/**
+ * @brief Returns the bitwise XOR (r = lhs ^ rhs) of two Cigint values.
+ * This is a copy wrapper of ::cigint_xor()
+ * @param lhs Left-hand operand (copied before modification).
+ * @param rhs Right-hand operand.
+ */
+inline Cigint cigint_xor(Cigint lhs, CFREF(Cigint) rhs) {
+	cigint_xor_ref(&lhs, &rhs);
+	return lhs;
 }
 
-uint cigint_highest_order(Cigint num) {
-	size_t i = 0;
-	while (i < CIGINT_N) {
-		if (num.data[i] > 0) {
-			return u1_highest_order(num.data[i]) + (CIGINT_N - i - 1) * SIZEOF_UINT;
+/* Two-phase, MSW-first left shift: limb move plus intra-word stitch. */
+inline Cigint cigint_shl(CFREF(Cigint) lhs, u32 amnt) {
+	if (amnt == 0) return lhs;
+
+	const size_t limb_off = amnt / SIZEOF_U32;
+	const u32 bits = amnt % SIZEOF_U32;
+
+	if (limb_off >= CIGINT_N) return CIGINT_ZERO(); // everything shifted out
+	Cigint r = (Cigint){0};
+	// Phase 1: limb-only move (toward MSW)
+	for (size_t i = 0; i + limb_off < CIGINT_N; ++i)
+		r.data[i] = lhs.data[i + limb_off];
+	// Phase 2: intra-word stitch (only if bits != 0)
+	if (bits) {
+		u32 snapshot[CIGINT_N];
+		// for (size_t i = 0; i < CIGINT_N; ++i) snapshot[i] = r.data[i];
+		memcpy(snapshot, r.data, sizeof snapshot);
+		for (size_t i = 0; i < CIGINT_N; ++i) {
+			const u32 hi = snapshot[i] << bits;
+			const u32 lo = i + 1 < CIGINT_N ? snapshot[i + 1] >> (SIZEOF_U32 - bits) : 0u;
+			r.data[i] = hi | lo;
 		}
-		i++;
+	}
+	return r;
+}
+
+/* Two-phase, MSW-first right shift: limb move plus intra-word stitch */
+inline Cigint cigint_shr(CFREF(Cigint) lhs, u32 amnt) {
+	if (amnt == 0) return lhs;
+	const size_t limb_off = amnt / SIZEOF_U32;
+	const u32 bits = amnt % SIZEOF_U32;
+	if (limb_off >= CIGINT_N) return CIGINT_ZERO(); // everything shifted out
+	Cigint r = CIGINT_ZERO();
+	// Phase 1: limb-only move (toward LSW)
+	for (size_t i = CIGINT_N; i-- > limb_off; )
+		r.data[i] = lhs.data[i - limb_off];
+	// Phase 2: intra-word stitch (only if bits != 0)
+	if (bits) {
+		u32 snapshot[CIGINT_N];
+		memcpy(snapshot, r.data, sizeof snapshot);
+		for (size_t i = 0; i < CIGINT_N; ++i) {
+			const u32 lo = snapshot[i] >> bits;
+			const u32 hi = i > 0 ? snapshot[i - 1] << (SIZEOF_U32 - bits) : 0u;
+			r.data[i] = hi | lo;
+		}
+	}
+	return r;
+}
+
+static inline u32 cigint_highest_order_ref(const Cigint *num) {
+	for (size_t i = 0; i < CIGINT_N; ++i) {
+		if (num->data[i] > 0) {
+			return u1_highest_order(num->data[i]) + (CIGINT_N - i - 1) * SIZEOF_U32;
+		}
 	}
 	return 0;
 }
 
-Cigint cigint_pow2(uint amnt) {
-	assert(amnt < CIGINT_N * SIZEOF_UINT);
-	Cigint res = {0};
-	res.data[CIGINT_N - 1 - amnt / SIZEOF_UINT] = (1 << (amnt % SIZEOF_UINT));
-	return res;
+inline u32 cigint_highest_order(CFREF(Cigint) num) {
+	return cigint_highest_order_ref(&num);
 }
 
-int cigint_cmp(Cigint lhs, Cigint rhs) {
-	size_t i = 0;
-	while (i < CIGINT_N) {
-		if (lhs.data[i] != rhs.data[i]) {
-			return lhs.data[i] > rhs.data[i] ? 1 : -1;
+inline Cigint cigint_pow2(u32 amnt) {
+	assert(amnt < CIGINT_N * SIZEOF_U32);
+	Cigint r = CIGINT_ZERO();
+	size_t limb = CIGINT_N - 1 - (amnt / SIZEOF_U32);
+	r.data[limb] = (u32)(1u << (amnt % SIZEOF_U32));
+	return r;
+}
+
+static inline int cigint_cmp_ref(const Cigint *lhs, const Cigint *rhs) {
+	for (size_t i = 0; i < CIGINT_N; ++i) {
+		if (lhs->data[i] != rhs->data[i]) {
+			return lhs->data[i] > rhs->data[i] ? 1 : -1;
 		}
-		i++;
 	}
 	return 0;
 }
 
-int cigint_is0(Cigint a) {
-	size_t i = 0;
-	while (i < CIGINT_N) {
-		if (a.data[i] != 0) {
-			return 0;
-		}
-		i++;
-	}
+inline int cigint_cmp(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
+	return cigint_cmp_ref(&lhs, &rhs);
+}
+
+static inline int cigint_is0_ref(const Cigint *a) {
+	for (size_t i = 0; i < CIGINT_N; ++i)
+		if (a->data[i] != 0) return 0;
 	return 1;
 }
 
