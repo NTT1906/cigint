@@ -205,15 +205,6 @@ inline Cigint cigint_set_bit(Cigint a, u32 pos, u32 val) {
 	return *cigint_set_bit_ref(&a, pos, val);
 }
 
-uint cigint_print2(Cigint a) {
-	uint counter = printf("0b"), old_counter = counter;
-	int bit_index = highest_order(a) - 1;
-
-	while (bit_index >= 0) {
-		/* TODO: use %2 */
-		int digit = get_bit(a, bit_index);
-		counter += printf("%d", digit);
-		bit_index--;
 inline void cigint_bit_reverse_ref(Cigint *a) {
 	u32 *start = a->data;
 	u32 *end = a->data + CIGINT_N - 1;
@@ -222,8 +213,6 @@ inline void cigint_bit_reverse_ref(Cigint *a) {
 		*start++ = u1_bit_reverse(*end);
 		*end-- = tmp;
 	}
-	if (counter == old_counter) {
-		counter += putchar('0');
 	if (CIGINT_N % 2 != 0) { // reverse the middle one if odd n
 		*start = u1_bit_reverse(*start);
 	}
