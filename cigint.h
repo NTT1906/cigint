@@ -456,6 +456,12 @@ inline Cigint cigint_pow(Cigint base, u32 exp) {
 	return base;
 }
 
+static inline Cigint cigint_from_u32(u32 x) {
+	Cigint tmp = CIGINT_ZERO();
+	tmp.data[CIGINT_N - 1] = x;
+	return tmp;
+}
+
 /* bitwise restoring long division
  * q,r can be NULL independent
  */
