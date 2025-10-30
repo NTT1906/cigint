@@ -366,11 +366,6 @@ inline Cigint cigint_sub(Cigint lhs, CFREF(Cigint) rhs) {
 	return lhs;
 }
 
-Cigint cigint_mul(Cigint lhs, Cigint rhs) {
-	Cigint res = {0};
-	while (!cigint_is0(rhs)) {
-		if (u1_get_bit(rhs.data[CIGINT_N - 1], 0) == 1) {
-			res = cigint_add(res, lhs);
 // void cigint_mul_ref(Cigint *a, const Cigint *b) {
 // 	Cigint temp = CIGINT_ZERO();
 // 	u64 carry = 0;
