@@ -20,13 +20,13 @@ typedef uint64_t u64;
 #define SIZEOF_U64 (8 * sizeof(u64))
 
 typedef struct Cigint {
-	uint data[CIGINT_N];
+	u32 data[CIGINT_N];
 
 #ifdef __cplusplus
-	Cigint() {
+	Cigint() : data{} {
 		memset(this->data, 0, sizeof(this->data));
 	}
-	Cigint(const Cigint &rhs) {
+	Cigint(const Cigint &rhs) : data{} {
 		memcpy(this->data, rhs.data, sizeof(rhs.data));
 	}
 	Cigint &operator=(const Cigint &rhs) {
@@ -35,7 +35,7 @@ typedef struct Cigint {
 		}
 		return *this;
 	}
-	Cigint(uint rhs) {
+	Cigint(u32 rhs) : data{} {
 		memset(this->data, 0, sizeof(this->data));
 		this->data[CIGINT_N - 1] = rhs;
 	}
