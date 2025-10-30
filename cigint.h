@@ -767,17 +767,19 @@ inline Cigint operator+(const Cigint &lhs, const Cigint &rhs) {
 }
 
 inline const Cigint &operator+=(Cigint &lhs, const Cigint &rhs) {
-	lhs = cigint_add(lhs, rhs);
+	cigint_add_ref(&lhs, &rhs);
 	return lhs;
 }
 
-/* TODO: find an ideal way when calculate with uint*/
-inline Cigint operator+(const Cigint &lhs, uint rhs) {
-	return cigint_add(lhs, rhs);
+/* TODO: find an ideal way when calculate with u32 */
+inline Cigint operator+(const Cigint &lhs, u32 rhs) {
+	Cigint tmp = cigint_from_u32(rhs);
+	return cigint_add(lhs, tmp);
 }
 
-inline const Cigint &operator+=(Cigint &lhs, uint rhs) {
-	lhs = cigint_add(lhs, rhs);
+inline const Cigint &operator+=(Cigint &lhs, u32 rhs) {
+	Cigint tmp = cigint_from_u32(rhs);
+	cigint_add_ref(&lhs, &tmp);
 	return lhs;
 }
 
@@ -786,7 +788,7 @@ inline Cigint operator-(const Cigint &lhs, const Cigint &rhs) {
 }
 
 inline const Cigint &operator-=(Cigint &lhs, const Cigint &rhs) {
-	lhs = cigint_sub(lhs, rhs);
+	cigint_sub_ref(&lhs, &rhs);
 	return lhs;
 }
 
@@ -795,7 +797,7 @@ inline Cigint operator*(const Cigint &lhs, const Cigint &rhs) {
 }
 
 inline const Cigint &operator*=(Cigint &lhs, const Cigint &rhs) {
-	lhs = cigint_mul(lhs, rhs);
+	cigint_mul_ref(&lhs, &rhs);
 	return lhs;
 }
 
@@ -809,23 +811,27 @@ inline const Cigint &operator/=(Cigint &lhs, const Cigint &rhs) {
 }
 
 inline bool operator==(const Cigint &lhs, const Cigint &rhs) {
-	return cigint_cmp(lhs, rhs) == 0;
+	return cigint_cmp_ref(&lhs, &rhs) == 0;
 }
 
 inline bool operator!=(const Cigint &lhs, const Cigint &rhs) {
-	return cigint_cmp(lhs, rhs) != 0;
+	return cigint_cmp_ref(&lhs, &rhs) != 0;
 }
 
 inline bool operator>(const Cigint &lhs, const Cigint &rhs) {
-	return cigint_cmp(lhs, rhs) > 0;
+	return cigint_cmp_ref(&lhs, &rhs) > 0;
+}
+
+inline bool operator<(const Cigint &lhs, const Cigint &rhs) {
+	return cigint_cmp_ref(&lhs, &rhs) < 0;
 }
 
 inline bool operator>=(const Cigint &lhs, const Cigint &rhs) {
-	return cigint_cmp(lhs, rhs) >= 0;
+	return cigint_cmp_ref(&lhs, &rhs) >= 0;
 }
 
 inline bool operator<=(const Cigint &lhs, const Cigint &rhs) {
-	return cigint_cmp(lhs, rhs) <= 0;
+	return cigint_cmp_ref(&lhs, &rhs) <= 0;
 }
 #endif
 #endif
