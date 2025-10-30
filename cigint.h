@@ -221,6 +221,29 @@ uint cigint_print2(Cigint a) {
 	return counter;
 }
 
+inline void cigint_bit_reverse_n_ref(Cigint *a, u32 n) {
+	for (u32 i = 0; i < n / 2; ++i) {
+		u32 j = n - 1 - i;
+		u32 bit_i = cigint_get_bit_ref(a, i);
+		u32 bit_j = cigint_get_bit_ref(a, j);
+		if (bit_i != bit_j) {
+			cigint_set_bit_ref(a, i, bit_j);
+			cigint_set_bit_ref(a, j, bit_i);
+		}
+	}
+}
+
+inline Cigint cigint_bit_reverse_n(FREF(Cigint) a, u32 n) {
+	cigint_bit_reverse_n_ref(&a, n);
+	return a;
+}
+
+inline Cigint cigint_bit_reverse_high(FREF(Cigint) a) {
+	cigint_bit_reverse_n_ref(&a, cigint_highest_order(a));
+	return a;
+}
+
+// TODO: Write doc
 inline void cigint_and_ref(Cigint *lhs, const Cigint *rhs) {
 	for (size_t i = 0; i < CIGINT_N; ++i) {
 		lhs->data[i] &= rhs->data[i];
