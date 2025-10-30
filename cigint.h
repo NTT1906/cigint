@@ -456,75 +456,106 @@ inline Cigint cigint_pow(Cigint base, u32 exp) {
 	return base;
 }
 
-void cigint_divmod(Cigint lhs, Cigint rhs, Cigint *q, Cigint *r) {
-	assert(!cigint_is0(rhs));
-	int comp = cigint_cmp(lhs, rhs);
-	if (comp <= 0) {
-		if (q != NULL) {
-			Cigint res = {0};
-			res.data[CIGINT_N - 1] = comp == 0;
-			*q = res;
-		}
-		if (r != NULL) {
-			*r = lhs;
-		}
+/* bitwise restoring long division
+ * q,r can be NULL independent
+ */
+static inline void cigint_divmod_ref(const Cigint *lhs, const Cigint *rhs, Cigint *q, Cigint *r) {
+	assert(!cigint_is0_ref(rhs));
+	int cmp = cigint_cmp_ref(lhs, rhs);
+	if (cmp < 0) {
+		if (q) *q = CIGINT_ZERO();
+		if (r) *r = *lhs;
 		return;
 	}
-	Cigint quotient = {0}, remainder = quotient;
-	int bit_index = cigint_highest_order(lhs) - 1;
-	while (bit_index >= 0) {
-		remainder = cigint_shl(remainder, 1);
-		remainder = cigint_set_bit(remainder, 0, cigint_get_bit(lhs, bit_index));
-		if (cigint_cmp(remainder, rhs) >= 0) {
-			remainder = cigint_sub(remainder, rhs);
-			quotient = set_bit(quotient, bit_index, 1);
+	if (cmp == 0) {
+		if (q) {
+			Cigint one = CIGINT_ZERO();
+			one.data[CIGINT_N - 1] = 1;
+			*q = one;
 		}
-		bit_index--;
+		if (r) *r = CIGINT_ZERO();
+		return;
 	}
-	if (q != NULL) {
-		*q = quotient;
+
+	Cigint quotient = CIGINT_ZERO();
+	Cigint rem = CIGINT_ZERO();
+
+	int top = (int) cigint_highest_order_ref(lhs) - 1;
+	for (int bit = top; bit >= 0; --bit) {
+		u32 carry = cigint_get_bit_ref(lhs, (u32) bit);
+		for (size_t i = CIGINT_N; i-- > 0; ) {
+			u32 v = rem.data[i];
+			rem.data[i] = (v << 1) | carry;
+			carry = v >> 31;
+		}
+
+		if (cigint_cmp_ref(&rem, rhs) >= 0) {
+			cigint_sub_ref(&rem, rhs);
+			quotient = cigint_set_bit(quotient, (u32) bit, 1u);
+		}
 	}
-	if (r != NULL) {
-		*r = remainder;
-	}
+
+	if (q) *q = quotient;
+	if (r) *r = rem;
 }
 
-void cigint_sdivmod(Cigint lhs, uint rhs, Cigint *q, uint *r) {
-	assert(rhs != 0);
-	uint hord = cigint_highest_order(lhs);
-	if (hord < SIZEOF_UINT && lhs.data[CIGINT_N - 1] <= rhs) {
-		if (q != NULL) {
-			Cigint res = {0};
-			res.data[CIGINT_N - 1] = lhs.data[CIGINT_N - 1] == rhs;
-			*q = res;
-		}
-		if (r != NULL) {
-			*r = lhs.data[CIGINT_N - 1];
-		}
-		return;
-	}
-	Cigint quotient = {0};
-	uint remainder = 0;
-	int bit_index = hord - 1;
-	while (bit_index >= 0) {
-		remainder = remainder << 1;
-		remainder = u1_set_bit(remainder, 0, cigint_get_bit(lhs, bit_index));
-		if (remainder >= rhs) {
-			remainder -= rhs;
-			quotient = set_bit(quotient, bit_index, 1);
-		}
-		bit_index--;
-	}
-	if (q != NULL) {
-		*q = quotient;
-	}
-	if (r != NULL) {
-		*r = remainder;
-	}
+inline void cigint_divmod(CFREF(Cigint) lhs, CFREF(Cigint) rhs, Cigint *q, Cigint *r) {
+	cigint_divmod_ref(&lhs, &rhs, q, r);
+}
+
+/* quotient only */
+inline Cigint cigint_div(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
+	Cigint q;
+	cigint_divmod_ref(&lhs, &rhs, &q, NULL);
+	return q;
+}
+
+/* remainder only */
+inline Cigint cigint_mod(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
+	Cigint r;
+	cigint_divmod_ref(&lhs, &rhs, NULL, &r);
+	return r;
 }
 
 /* TODO: stack overflow */
 uint cigint_print10(Cigint a) {
+/* single-limb divisor, fixed version */
+static inline void cigint_sdivmod_ref(const Cigint *lhs, u32 rhs, Cigint *q, u32 *r) {
+	assert(rhs != 0);
+	u64 rem = 0;
+	Cigint quo = CIGINT_ZERO();
+
+	u32 hord = cigint_highest_order_ref(lhs);
+	// walk bits from MSB -> LSB
+	for (int bit = (int) hord - 1; bit >= 0; --bit) {
+		rem = (rem << 1) | cigint_get_bit_ref(lhs, (u32) bit);
+		if (rem >= rhs) {
+			rem -= rhs;
+			quo = cigint_set_bit(quo, (u32)bit, 1u);
+		}
+	}
+
+	if (q) *q = quo;
+	if (r) *r = rem;
+}
+
+inline void cigint_sdivmod(CFREF(Cigint) lhs, const u32 rhs, Cigint *q, u32 *r) {
+	cigint_sdivmod_ref(&lhs, rhs, q, r);
+}
+
+inline u32 cigint_print2(CFREF(Cigint) a) {
+	u32 counter = printf("0b");
+	u32 ho = cigint_highest_order(a);
+	if (ho == 0) {
+		counter += (u32)putchar('0');
+		return counter;
+	}
+	for (u32 bit = ho; bit-- > 0;) {
+		int d = (int) cigint_get_bit_ref(&a, bit);
+		counter += printf("%d", d);
+	}
+	return counter;
+}
 	if (cigint_is0(a)) {
 		return 0;
 	}
