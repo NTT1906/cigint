@@ -420,6 +420,26 @@ inline Cigint cigint_mul(Cigint lhs, CFREF(Cigint) rhs) {
 
 Cigint cigint_pow(Cigint lhs, uint amnt) {
 	Cigint res = {0};
+static inline void cigint_sqr_ref(Cigint *base) {
+	Cigint tmp = CIGINT_ZERO();
+	for (size_t i = 0; i < CIGINT_N; ++i) {
+		for (size_t j = 0; j <= i; ++j) {
+			u64 p = (u64) base->data[i] * (u64) base->data[j];
+			if (i != j) p <<= 1; // double off-diagonal
+			size_t k = i + j;
+			if (k < CIGINT_N) {
+				u64 sum = (u64) tmp.data[k] + p;
+				tmp.data[k] = (u32) sum; // ignore overflow beyond 32/64 bits of out[k]
+			}
+		}
+	}
+	*base = tmp;
+}
+
+inline Cigint cigint_sqr(Cigint base) {
+	cigint_sqr_ref(&base);
+	return base;
+}
 	res.data[CIGINT_N - 1] = 1;
 	while (amnt > 0) {
 		if (amnt % 2 == 1) {
