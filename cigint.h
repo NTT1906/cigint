@@ -94,52 +94,36 @@ uint cigint_printf(const char *fmt, ...);
 #endif
 
 #ifdef CIGINT_IMPLEMENTATION
-static uint u1_get_bit(uint num, uint pos) {
-	if (pos >= SIZEOF_UINT) {
-		return 0;
-	}
+static u32 u1_get_bit(u32 num, u32 pos) { return (num >> pos) & (u32)1; }
 
-	return (num & (1UL << pos)) >> pos;
+static u32 u1_set_bit(u32 num, u32 pos, u32 val) {
+	if (pos >= SIZEOF_U32) return num;
+	u32 mask = (u32)1 << pos;
+	return (num & ~mask) | ((val & 1u) ? mask : 0u);
 }
 
-static uint u1_set_bit(uint num, uint pos, uint val) {
-	if (pos >= SIZEOF_UINT) {
-		return 0;
-	}
-
-	return (num & ~(1UL << pos)) | (val << pos);
+// reverse bits by divide-and-conquer
+static u32 u1_bit_reverse(u32 num) {
+    num = ((num & 0x55555555U) << 1) | ((num >> 1) & 0x55555555U);
+    num = ((num & 0x33333333U) << 2) | ((num >> 2) & 0x33333333U);
+    num = ((num & 0x0F0F0F0FU) << 4) | ((num >> 4) & 0x0F0F0F0FU);
+    num = ((num & 0x00FF00FFU) << 8) | ((num >> 8) & 0x00FF00FFU);
+    return (num << 16) | (num >> 16);
 }
 
-static uint u1_shl(uint num, uint amnt) {
-	if (amnt >= SIZEOF_UINT) {
-		return 0;
-	}
-
-	return num << amnt;
-}
-
-static uint u1_shr(uint num, uint amnt) {
-	if (amnt >= SIZEOF_UINT) {
-		return 0;
-	}
-
-	return num >> amnt;
-}
-
-static uint u1_highest_order(uint num) {
-	uint pos = 0;
+static u32 u1_highest_order(u32 num) {
+	u32 pos = 0;
 	while (num > 0) {
-		pos++;
+		++pos;
 		num >>= 1;
 	}
-
 	return pos;
 }
-static uint u1_get_last_nbits(uint num, uint amnt) {
-	if (amnt >= SIZEOF_UINT) {
+
+static u32 u1_get_last_nbits(u32 num, u32 amnt) {
+	if (amnt >= SIZEOF_U32) {
 		return 0;
 	}
-
 	return num & ((1ul << amnt) - 1);
 }
 
