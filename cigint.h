@@ -442,25 +442,6 @@ inline Cigint cigint_sqr(Cigint base) {
 static inline void cigint_pow_ref(Cigint *base, u32 exp) {
 	Cigint res = CIGINT_ZERO();
 	res.data[CIGINT_N - 1] = 1;
-
-Cigint cigint_div(Cigint lhs, Cigint rhs) {
-	assert(!cigint_is0(rhs));
-	int comp = cigint_cmp(lhs, rhs);
-	if (comp <= 0) {
-		Cigint res = {0};
-		res.data[CIGINT_N - 1] = comp == 0;
-		return res;
-	}
-	Cigint quotient = {0}, r = quotient;
-	int bit_index = cigint_highest_order(lhs) - 1;
-	while (bit_index >= 0) {
-		r = cigint_shl(r, 1);
-		r = set_bit(r, 0, get_bit(lhs, bit_index));
-		if (cigint_cmp(r, rhs) >= 0) {
-			r = cigint_sub(r, rhs);
-			quotient = set_bit(quotient, bit_index, 1);
-		}
-		bit_index--;
 	while (exp) {
 		if (exp & 1u) cigint_mul_ref(&res, base);
 		exp >>= 1;
@@ -470,24 +451,6 @@ Cigint cigint_div(Cigint lhs, Cigint rhs) {
 	*base = res;
 }
 
-Cigint cigint_mod(Cigint lhs, Cigint rhs) {
-	assert(!cigint_is0(rhs));
-	int comp = cigint_cmp(lhs, rhs);
-	if (comp <= 0) {
-		return lhs;
-	}
-	Cigint quotient = {0}, r = quotient;
-	int bit_index = cigint_highest_order(lhs) - 1;
-	while (bit_index >= 0) {
-		r = cigint_shl(r, 1);
-		r = set_bit(r, 0, get_bit(lhs, bit_index));
-		if (cigint_cmp(r, rhs) >= 0) {
-			r = cigint_sub(r, rhs);
-			quotient = set_bit(quotient, bit_index, 1);
-		}
-		bit_index--;
-	}
-	return r;
 inline Cigint cigint_pow(Cigint base, u32 exp) {
 	cigint_pow_ref(&base, exp);
 	return base;
