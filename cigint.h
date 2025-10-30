@@ -54,55 +54,100 @@ typedef struct Cigint {
 #endif
 } Cigint;
 
-uint cigint_get_bit(Cigint a, uint pos);
-Cigint cigint_set_bit(Cigint a, uint pos, uint val);
-uint cigint_print2(Cigint a);
-Cigint cigint_and(Cigint lhs, Cigint rhs);
-Cigint cigint_or(Cigint lhs, Cigint rhs);
-Cigint cigint_xor(Cigint lhs, Cigint rhs);
+#ifdef __cplusplus
+#define CIGINT_ZERO() Cigint{}
+#else
+#define CIGINT_ZERO() (Cigint){0}
+#endif
+
+#ifdef __cplusplus
+#define FREF(type) type&
+#define CFREF(type) const FREF(type)
+#else
+#define FREF(type) type
+#define CFREF(type) FREF(type)
+#endif
+
+static inline u32 cigint_get_bit_ref(const Cigint *a, u32 pos);
+u32 cigint_get_bit(CFREF(Cigint) a, u32 pos);
+static inline Cigint *cigint_set_bit_ref(Cigint *a, u32 pos, u32 val);
+Cigint cigint_set_bit(Cigint a, u32 pos, u32 val);
+u32 cigint_print10(CFREF(Cigint) a);
+u32 cigint_print2(CFREF(Cigint) a);
+u32 cigint_print16(CFREF(Cigint) a);
+u32 cigint_print16_upper(CFREF(Cigint) a);
+int cigint_is0(CFREF(Cigint) a);
+int cigint_cmp(CFREF(Cigint) lhs, CFREF(Cigint) rhs);
+u32 cigint_highest_order(CFREF(Cigint) num);
+
+inline void cigint_and_ref(Cigint *lhs, const Cigint *rhs);
+Cigint cigint_and(Cigint lhs, CFREF(Cigint) rhs);
+void cigint_not_ref(Cigint *a);
 Cigint cigint_not(Cigint a);
-Cigint cigint_shl(Cigint lhs, uint amnt);
-Cigint cigint_shr(Cigint lhs, uint amnt);
-uint cigint_highest_order(Cigint num);
-Cigint cigint_pow2(uint amnt);
-int cigint_cmp(Cigint lhs, Cigint rhs);
-int cigint_is0(Cigint a);
-Cigint cigint_add(Cigint lhs, Cigint rhs);
-Cigint cigint_sub(Cigint lhs, Cigint rhs);
-Cigint cigint_mul(Cigint lhs, Cigint rhs);
-Cigint cigint_pow(Cigint lhs, uint amnt);
-Cigint cigint_div(Cigint lhs, Cigint rhs);
-Cigint cigint_mod(Cigint lhs, Cigint rhs);
-void cigint_divmod(Cigint lhs, Cigint rhs, Cigint *q, Cigint *r);
-uint cigint_print10(Cigint a);
-uint cigint_printf(const char *fmt, ...);
+void cigint_xor_ref(Cigint *lhs, const Cigint *rhs);
+Cigint cigint_xor(Cigint lhs, CFREF(Cigint) rhs);
+void cigint_or_ref(Cigint *lhs, const Cigint *rhs);
+Cigint cigint_or(Cigint lhs, CFREF(Cigint) rhs);
+
+Cigint cigint_shl(CFREF(Cigint) lhs, u32 amnt);
+Cigint cigint_shr(CFREF(Cigint) lhs, u32 amnt);
+Cigint cigint_pow2(u32 amnt);
+
+static inline void cigint_add_ref(Cigint *lhs, const Cigint *rhs);
+Cigint cigint_add(Cigint lhs, CFREF(Cigint) rhs);
+static inline void cigint_sub_ref(Cigint *lhs, const Cigint *rhs);
+Cigint cigint_sub(Cigint lhs, CFREF(Cigint) rhs);
+static inline void cigint_mul_ref(Cigint *lhs, const Cigint *rhs);
+Cigint cigint_mul(Cigint lhs, CFREF(Cigint) rhs);
+static inline void cigint_sqr_ref(Cigint *base);
+static inline void cigint_pow_ref(Cigint *base, u32 exp);
+Cigint cigint_pow(Cigint base, u32 exp);
+static inline void cigint_divmod_ref(const Cigint *lhs, const Cigint *rhs, Cigint *q, Cigint *r);
+void cigint_divmod(CFREF(Cigint) lhs, CFREF(Cigint) rhs, Cigint *q, Cigint *r);
+Cigint cigint_div(CFREF(Cigint) lhs, CFREF(Cigint) rhs);
+Cigint cigint_mod(CFREF(Cigint) lhs, CFREF(Cigint) rhs);
+inline Cigint cigint_sqr(Cigint base);
+u32 cigint_printf(const char *fmt, ...);
 
 #ifdef CIGINT_STRIP_PREFIX
-#define get_bit cigint_get_bit
-#define set_bit cigint_set_bit
-#define print2 cigint_print2
+	#define get_bit_ref cigint_get_bit_ref
+	#define get_bit cigint_get_bit
+	#define set_bit cigint_set_bit
 
-/* not to be confused with C++ macros */
-#define cand cigint_and
-#define cor cigint_or
-#define cxor cigint_xor
-#define cnot cigint_not
+	/* not to be confused with C++ macros */
+	#define cand cigint_and
+	#define cor cigint_or
+	#define cxor cigint_xor
+	#define cnot cigint_not
 
-#define shl cigint_shl
-#define shr cigint_shr
-#define highest_order cigint_highest_order
-#define pow2 cigint_pow2
-#define cmp cigint_cmp
-#define is0 cigint_is0
-#define add cigint_add
-#define sub cigint_sub
-#define mul cigint_mul
-#define pow cigint_pow
-#define div cigint_div
-#define mod cigint_mod
-#define divmod cigint_divmod
-#define print10 cigint_print10
-#define cprintf cigint_printf
+	#define shl cigint_shl
+	#define shr cigint_shr
+	#define highest_order cigint_highest_order
+	#define pow2 cigint_pow2
+	#define cmp cigint_cmp
+	#define is0 cigint_is0
+
+	#define add cigint_add
+	#define addr cigint_add_ref
+	#define sub cigint_sub
+	#define subr cigint_sub_ref
+	#define mul cigint_mul
+	#define mulr cigint_mul_ref
+
+	#define divmod cigint_divmod
+	#define divmodr cigint_divmod_ref
+	#define div cigint_div
+	#define mod cigint_mod
+
+	#define pow cigint_pow
+	#define powr cigint_pow_ref
+	#define sqr cigint_sqr
+
+	#define print2 cigint_print2
+	#define print10 cigint_print10
+	#define print16 cigint_print16
+	#define print16U cigint_print16_upper
+	#define cprintf cigint_printf
 #endif
 
 #ifdef CIGINT_IMPLEMENTATION
