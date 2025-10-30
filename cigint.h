@@ -28,7 +28,9 @@ typedef struct Cigint {
 		memcpy(this->data, rhs.data, sizeof(rhs.data));
 	}
 	Cigint &operator=(const Cigint &rhs) {
-		memcpy(this->data, rhs.data, sizeof(rhs.data));
+		if (this != &rhs) {
+			memcpy(this->data, rhs.data, sizeof(rhs.data));
+		}
 		return *this;
 	}
 	Cigint(uint rhs) {
