@@ -200,6 +200,7 @@ static inline Cigint *cigint_set_bit_ref(Cigint *a, u32 pos, u32 val) {
 	a->data[data_index] = u1_set_bit(a->data[data_index], pos % SIZEOF_U32, val);
 	return a;
 }
+
 inline Cigint cigint_set_bit(Cigint a, u32 pos, u32 val) {
 	return *cigint_set_bit_ref(&a, pos, val);
 }
@@ -338,16 +339,31 @@ Cigint cigint_add(Cigint lhs, Cigint rhs) {
 		Cigint carry = cigint_and(lhs, rhs);
 		lhs = cigint_xor(lhs, rhs);
 		rhs = cigint_shl(carry, 1);
+static inline void cigint_add_ref(Cigint *lhs, const Cigint *rhs) {
+	u64 sum = 0;
+	for (size_t i = CIGINT_N; i-- > 0;) {
+		sum = (u64) lhs->data[i] + (u64) rhs->data[i] + (sum >> SIZEOF_U32);
+		lhs->data[i] = (u32) sum;
 	}
+}
+
+inline Cigint cigint_add(Cigint lhs, CFREF(Cigint) rhs) {
+	cigint_add_ref(&lhs, &rhs);
 	return lhs;
 }
 
-Cigint cigint_sub(Cigint lhs, Cigint rhs) {
-	while (!cigint_is0(rhs)) {
-		Cigint borrow = cigint_and(cigint_not(lhs), rhs);
-		lhs = cigint_xor(lhs, rhs);
-		rhs = cigint_shl(borrow, 1);
+static inline void cigint_sub_ref(Cigint *lhs, const Cigint *rhs) {
+	u64 borrow = 0;
+	for (size_t i = CIGINT_N; i-- > 0;) {
+		u64 a = lhs->data[i];
+		u64 t = (u64)rhs->data[i] + borrow;
+		lhs->data[i] = (uint32_t)(a - t);
+		borrow = a < t;
 	}
+}
+
+inline Cigint cigint_sub(Cigint lhs, CFREF(Cigint) rhs) {
+	cigint_sub_ref(&lhs, &rhs);
 	return lhs;
 }
 
