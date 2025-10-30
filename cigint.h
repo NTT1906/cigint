@@ -14,8 +14,10 @@
 #endif
 sassert(CIGINT_N > 1, "CIGINT_N > 1");
 
-typedef unsigned int uint;
-#define SIZEOF_UINT (8 * sizeof(uint))
+typedef uint32_t u32;
+typedef uint64_t u64;
+#define SIZEOF_U32 (8 * sizeof(u32))
+#define SIZEOF_U64 (8 * sizeof(u64))
 
 typedef struct Cigint {
 	uint data[CIGINT_N];
