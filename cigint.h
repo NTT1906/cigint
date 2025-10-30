@@ -517,8 +517,6 @@ inline Cigint cigint_mod(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
 	return r;
 }
 
-/* TODO: stack overflow */
-uint cigint_print10(Cigint a) {
 /* single-limb divisor, fixed version */
 static inline void cigint_sdivmod_ref(const Cigint *lhs, u32 rhs, Cigint *q, u32 *r) {
 	assert(rhs != 0);
@@ -556,6 +554,28 @@ inline u32 cigint_print2(CFREF(Cigint) a) {
 	}
 	return counter;
 }
+
+// u32 cigint_print2(CFREF(Cigint) a) {
+// 	u32 counter = printf("0b"), old_counter = counter;
+// 	int bit_index = cigint_highest_order(a) - 1;
+//
+// 	while (bit_index >= 0) {
+// 		/* TODO: use %2 */
+// 		int digit = cigint_get_bit_ref(&a, bit_index);
+// 		counter += printf("%d", digit);
+// 		--bit_index;
+// 	}
+// 	if (counter == old_counter) {
+// 		counter += putchar('0');
+// 	}
+// 	return counter;
+// }
+
+// Each Cigint has CIGINT_N * 32 bits.
+// Each 10^8 chunk holds ~26.6 bits (log2(10^8) ≈ 26.6). So max chunks = ceil(total_bits / 26.6)
+#define CIGINT_PRINT10_CHUNKS ((CIGINT_N * SIZEOF_U32 + 26) / 27)
+
+inline u32 cigint_print10(CFREF(Cigint) a) {
 	if (cigint_is0(a)) {
 		return 0;
 	}
@@ -623,6 +643,122 @@ uint cigint_printf(const char *fmt, ...) {
 	va_end(lst);
 	return counter;
 }
+
+static inline int is_space_c(unsigned char c) {
+	return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f' || c=='\v';
+}
+
+static inline int hex_val(unsigned char c) {
+	if (c >= '0' && c <= '9') return c - '0';
+	if (c >= 'a' && c <= 'f') return 10 + (c - 'a');
+	if (c >= 'A' && c <= 'F') return 10 + (c - 'A');
+	return -1;
+}
+
+inline Cigint cigint_from_dec(const char *s) {
+	assert(s && "cigint_from_dec: null pointer");
+	Cigint out = CIGINT_ZERO();
+
+	// skip leading spaces and optional '+'
+	while (is_space_c(*s)) ++s;
+	if (*s == '+') ++s;
+	assert(*s != '-' && "cigint_from_dec: negative not supported");
+
+	// skip leading zeros, underscores, spaces
+	const char *p = s;
+	int any = 0;
+	while (*p == '0' || *p == '_' || is_space_c(*p)) {
+		if (*p == '0') any = 1;
+		++p;
+	}
+	Cigint n10 = cigint_from_u32(10u);
+	Cigint tmp = CIGINT_ZERO();
+	for (; *p; ++p) {
+		char c = *p;
+		if (c == '_' || is_space_c(c)) continue;
+		if (c < '0' || c > '9') break;
+		any = 1;
+		cigint_mul_ref(&out, &n10);
+		tmp.data[CIGINT_N - 1] = c - '0';
+		cigint_add_ref(&out, &tmp);
+	}
+
+	// trailing junk? allow only spaces/underscores
+	while (*p && (is_space_c(*p) || *p == '_')) ++p;
+	assert(any && "cigint_from_dec: no digits");
+	return out;
+}
+
+inline Cigint cigint_from_hex(const char *s) {
+	assert(s && "cigint_from_hex: null pointer");
+	Cigint out = CIGINT_ZERO();
+
+	while (is_space_c(*s)) ++s;
+	if (*s == '+') ++s;
+	assert(*s != '-' && "cigint_from_hex: negative not supported");
+
+	if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) s += 2;
+
+	const char *p = s;
+	int any = 0;
+
+	// skip leading zeros/sep
+	while (*p == '0' || *p == '_' || is_space_c(*p)) {
+		if (*p == '0') any = 1;
+		++p;
+	}
+
+	Cigint n16 = cigint_from_u32(16u);
+	Cigint tmp = CIGINT_ZERO();
+	for (; *p; ++p) {
+		char c = *p;
+		if (c == '_' || is_space_c(c)) continue;
+		int d = hex_val(c);
+		if (d < 0) break;
+		any = 1;
+		cigint_mul_ref(&out, &n16);
+		tmp.data[CIGINT_N - 1] = d;
+		cigint_add_ref(&out, &tmp);
+	}
+
+	while (*p && (is_space_c(*p) || *p == '_')) ++p;
+	assert(any && "cigint_from_hex: no digits");
+	return out;
+}
+
+inline Cigint cigint_from_bin(const char *s) {
+	assert(s && "cigint_from_bin: null pointer");
+	Cigint out = CIGINT_ZERO();
+	while (is_space_c(*s)) ++s;
+	if (s[0] == '0' && (s[1] == 'b' || s[1] == 'B')) s += 2;
+	while (*s == '0' || *s == '_' || is_space_c(*s)) ++s;
+	size_t k = 0;
+	for (const char *p = s; *p; ++p) {
+		if (*p == '0' || *p == '1') {
+			cigint_set_bit_ref(&out, k++, *p == '1');
+		} else if (*p != '_' && !is_space_c(*p)) {
+			break; // stop at the 1st invalid chr
+		}
+	}
+	assert(k && "cigint_from_bin: no digits");
+	cigint_bit_reverse_n_ref(&out, k);
+	return out;
+}
+
+inline Cigint cigint_from_str(const char *s) {
+	assert(s && "cigint_from_str: null pointer");
+	const char *p = s;
+	while (is_space_c(*p)) ++p;
+	if (*p == '+') ++p;
+	if (*p == '-') {
+		assert(0 && "cigint_from_str: negative not supported");
+	}
+
+	if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) return cigint_from_hex(p);
+	if (p[0] == '0' && (p[1] == 'b' || p[1] == 'B')) return cigint_from_bin(p);
+	return cigint_from_dec(p);
+}
+
 #endif
 
 #ifdef __cplusplus
