@@ -418,8 +418,6 @@ inline Cigint cigint_mul(Cigint lhs, CFREF(Cigint) rhs) {
 	return lhs;
 }
 
-Cigint cigint_pow(Cigint lhs, uint amnt) {
-	Cigint res = {0};
 static inline void cigint_sqr_ref(Cigint *base) {
 	Cigint tmp = CIGINT_ZERO();
 	for (size_t i = 0; i < CIGINT_N; ++i) {
@@ -440,17 +438,10 @@ inline Cigint cigint_sqr(Cigint base) {
 	cigint_sqr_ref(&base);
 	return base;
 }
-	res.data[CIGINT_N - 1] = 1;
-	while (amnt > 0) {
-		if (amnt % 2 == 1) {
-			res = mul(res, lhs);
-		}
 
-		lhs = mul(lhs, lhs);
-		amnt /= 2;
-	}
-	return res;
-}
+static inline void cigint_pow_ref(Cigint *base, u32 exp) {
+	Cigint res = CIGINT_ZERO();
+	res.data[CIGINT_N - 1] = 1;
 
 Cigint cigint_div(Cigint lhs, Cigint rhs) {
 	assert(!cigint_is0(rhs));
@@ -470,8 +461,13 @@ Cigint cigint_div(Cigint lhs, Cigint rhs) {
 			quotient = set_bit(quotient, bit_index, 1);
 		}
 		bit_index--;
+	while (exp) {
+		if (exp & 1u) cigint_mul_ref(&res, base);
+		exp >>= 1;
+		if (!exp) break;
+		cigint_sqr_ref(base);
 	}
-	return quotient;
+	*base = res;
 }
 
 Cigint cigint_mod(Cigint lhs, Cigint rhs) {
@@ -492,6 +488,9 @@ Cigint cigint_mod(Cigint lhs, Cigint rhs) {
 		bit_index--;
 	}
 	return r;
+inline Cigint cigint_pow(Cigint base, u32 exp) {
+	cigint_pow_ref(&base, exp);
+	return base;
 }
 
 void cigint_divmod(Cigint lhs, Cigint rhs, Cigint *q, Cigint *r) {
