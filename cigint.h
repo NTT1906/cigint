@@ -221,12 +221,15 @@ uint cigint_print2(Cigint a) {
 	return counter;
 }
 
-Cigint cigint_and(Cigint lhs, Cigint rhs) {
-	size_t i = 0;
-	while (i < CIGINT_N) {
-		lhs.data[i] &= rhs.data[i];
-		i++;
+inline void cigint_and_ref(Cigint *lhs, const Cigint *rhs) {
+	for (size_t i = 0; i < CIGINT_N; ++i) {
+		lhs->data[i] &= rhs->data[i];
 	}
+}
+
+// TODO: Write doc
+inline Cigint cigint_and(Cigint lhs, CFREF(Cigint) rhs) {
+	cigint_and_ref(&lhs , &rhs);
 	return lhs;
 }
 
