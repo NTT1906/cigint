@@ -430,26 +430,6 @@ inline Cigint cigint_sub(Cigint lhs, CFREF(Cigint) rhs) {
 	return lhs;
 }
 
-// void cigint_mul_ref(Cigint *a, const Cigint *b) {
-// 	Cigint temp = CIGINT_ZERO();
-// 	u64 carry = 0;
-//
-// 	// Compute LSW-first into temp
-// 	for (size_t k = 0; k < CIGINT_N; ++k) {
-// 		u64 acc = carry;
-// 		for (size_t i = 0; i <= k; ++i) {
-// 			acc += (u64)a->data[CIGINT_N - 1 - i] * (u64)b->data[CIGINT_N - 1 - (k - i)];
-// 		}
-// 		temp.data[k] = (uint32_t)acc;
-// 		carry = acc >> 32;
-// 	}
-//
-// 	// Copy temp back to a->data in MSW-first order
-// 	for (size_t k = 0; k < CIGINT_N; ++k) {
-// 		a->data[CIGINT_N - 1 - k] = temp.data[k];
-// 	}
-// }
-
 static inline void cigint_mul_ref(Cigint *lhs, const Cigint *rhs) {
 	Cigint tmp = CIGINT_ZERO();
 	u64 carry = 0;
