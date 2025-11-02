@@ -35,9 +35,7 @@ typedef struct Cigint {
 	u32 data[CIGINT_N];
 
 #ifdef __cplusplus
-	Cigint() : data{} {
-		memset(this->data, 0, sizeof(this->data));
-	}
+	Cigint() : data{} {}
 	Cigint(const Cigint &rhs) : data{} {
 		memcpy(this->data, rhs.data, sizeof(rhs.data));
 	}
@@ -48,7 +46,6 @@ typedef struct Cigint {
 		return *this;
 	}
 	Cigint(u32 rhs) : data{} {
-		memset(this->data, 0, sizeof(this->data));
 		this->data[CIGINT_N - 1] = rhs;
 	}
 #endif
