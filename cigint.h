@@ -69,9 +69,9 @@ typedef struct Cigint {
 #define CFREF(type) FREF(type)
 #endif
 
-static inline u32 cigint_get_bit_ref(const Cigint *a, u32 pos);
+u32 cigint_get_bit_ref(const Cigint *a, u32 pos);
 u32 cigint_get_bit(CFREF(Cigint) a, u32 pos);
-static inline Cigint *cigint_set_bit_ref(Cigint *a, u32 pos, u32 val);
+Cigint *cigint_set_bit_ref(Cigint *a, u32 pos, u32 val);
 Cigint cigint_set_bit(Cigint a, u32 pos, u32 val);
 u32 cigint_print10(CFREF(Cigint) a);
 u32 cigint_print2(CFREF(Cigint) a);
@@ -81,7 +81,7 @@ int cigint_is0(CFREF(Cigint) a);
 int cigint_cmp(CFREF(Cigint) lhs, CFREF(Cigint) rhs);
 u32 cigint_highest_order(CFREF(Cigint) num);
 
-inline void cigint_and_ref(Cigint *lhs, const Cigint *rhs);
+void cigint_and_ref(Cigint *lhs, const Cigint *rhs);
 Cigint cigint_and(Cigint lhs, CFREF(Cigint) rhs);
 void cigint_not_ref(Cigint *a);
 Cigint cigint_not(Cigint a);
@@ -94,21 +94,24 @@ Cigint cigint_shl(CFREF(Cigint) lhs, u32 amnt);
 Cigint cigint_shr(CFREF(Cigint) lhs, u32 amnt);
 Cigint cigint_pow2(u32 amnt);
 
-static inline void cigint_add_ref(Cigint *lhs, const Cigint *rhs);
+Cigint cigint_from_u32(u32 x);
+
+void cigint_add_ref(Cigint *lhs, const Cigint *rhs);
 Cigint cigint_add(Cigint lhs, CFREF(Cigint) rhs);
-static inline void cigint_sub_ref(Cigint *lhs, const Cigint *rhs);
+void cigint_sub_ref(Cigint *lhs, const Cigint *rhs);
 Cigint cigint_sub(Cigint lhs, CFREF(Cigint) rhs);
-static inline void cigint_mul_ref(Cigint *lhs, const Cigint *rhs);
+void cigint_mul_ref(Cigint *lhs, const Cigint *rhs);
 Cigint cigint_mul(Cigint lhs, CFREF(Cigint) rhs);
-static inline void cigint_sqr_ref(Cigint *base);
-static inline void cigint_pow_ref(Cigint *base, u32 exp);
+void cigint_sqr_ref(Cigint *base);
+void cigint_pow_ref(Cigint *base, u32 exp);
 Cigint cigint_pow(Cigint base, u32 exp);
-static inline void cigint_divmod_ref(const Cigint *lhs, const Cigint *rhs, Cigint *q, Cigint *r);
+void cigint_divmod_ref(const Cigint *lhs, const Cigint *rhs, Cigint *q, Cigint *r);
 void cigint_divmod(CFREF(Cigint) lhs, CFREF(Cigint) rhs, Cigint *q, Cigint *r);
 Cigint cigint_div(CFREF(Cigint) lhs, CFREF(Cigint) rhs);
 Cigint cigint_mod(CFREF(Cigint) lhs, CFREF(Cigint) rhs);
-inline Cigint cigint_sqr(Cigint base);
-u32 cigint_printf(const char *fmt, ...);
+Cigint cigint_sqr(Cigint base);
+// u32 cigint_printf(const char *fmt, ...);
+
 Cigint cigint_from_dec(const char *s);
 Cigint cigint_from_hex(const char *s);
 Cigint cigint_from_bin(const char *s);
@@ -117,6 +120,7 @@ size_t cigint_to_hex(const Cigint *x, char *buf, size_t buf_size, int uppercase)
 size_t cigint_to_bin(const Cigint *x, char *buf, size_t buf_size);
 
 #ifdef CIGINT_STRIP_PREFIX
+	#define from_u32 cigint_from_u32
 	#define get_bit_ref cigint_get_bit_ref
 	#define get_bit cigint_get_bit
 	#define set_bit cigint_set_bit
@@ -158,16 +162,16 @@ size_t cigint_to_bin(const Cigint *x, char *buf, size_t buf_size);
 #endif
 
 #ifdef CIGINT_IMPLEMENTATION
-static u32 u1_get_bit(u32 num, u32 pos) { return (num >> pos) & (u32)1; }
+u32 u1_get_bit(u32 num, u32 pos) { return (num >> pos) & (u32)1; }
 
-static u32 u1_set_bit(u32 num, u32 pos, u32 val) {
+u32 u1_set_bit(u32 num, u32 pos, u32 val) {
 	if (pos >= SIZEOF_U32) return num;
 	u32 mask = (u32)1 << pos;
 	return (num & ~mask) | ((val & 1u) ? mask : 0u);
 }
 
 // reverse bits by divide-and-conquer
-static u32 u1_bit_reverse(u32 num) {
+u32 u1_bit_reverse(u32 num) {
     num = ((num & 0x55555555U) << 1) | ((num >> 1) & 0x55555555U);
     num = ((num & 0x33333333U) << 2) | ((num >> 2) & 0x33333333U);
     num = ((num & 0x0F0F0F0FU) << 4) | ((num >> 4) & 0x0F0F0F0FU);
@@ -175,7 +179,7 @@ static u32 u1_bit_reverse(u32 num) {
     return (num << 16) | (num >> 16);
 }
 
-static u32 u1_highest_order(u32 num) {
+u32 u1_highest_order(u32 num) {
 	u32 pos = 0;
 	while (num > 0) {
 		++pos;
@@ -184,35 +188,35 @@ static u32 u1_highest_order(u32 num) {
 	return pos;
 }
 
-static u32 u1_get_last_nbits(u32 num, u32 amnt) {
+u32 u1_get_last_nbits(u32 num, u32 amnt) {
 	if (amnt >= SIZEOF_U32) {
 		return 0;
 	}
 	return num & ((1ul << amnt) - 1);
 }
 
-static inline u32 cigint_get_bit_ref(const Cigint *a, u32 pos) {
+u32 cigint_get_bit_ref(const Cigint *a, u32 pos) {
 	assert(pos < CIGINT_N * SIZEOF_U32);
 	size_t data_index = CIGINT_N - 1 - pos / SIZEOF_U32;
 	return u1_get_bit(a->data[data_index], pos % SIZEOF_U32);
 }
 
-inline u32 cigint_get_bit(CFREF(Cigint) a, u32 pos) {
+u32 cigint_get_bit(CFREF(Cigint) a, u32 pos) {
 	return cigint_get_bit_ref(&a, pos);
 }
 
-static inline Cigint *cigint_set_bit_ref(Cigint *a, u32 pos, u32 val) {
+Cigint *cigint_set_bit_ref(Cigint *a, u32 pos, u32 val) {
 	assert(pos < CIGINT_N * SIZEOF_U32);
 	size_t data_index = CIGINT_N - 1 - pos / SIZEOF_U32;
 	a->data[data_index] = u1_set_bit(a->data[data_index], pos % SIZEOF_U32, val);
 	return a;
 }
 
-inline Cigint cigint_set_bit(Cigint a, u32 pos, u32 val) {
+Cigint cigint_set_bit(Cigint a, u32 pos, u32 val) {
 	return *cigint_set_bit_ref(&a, pos, val);
 }
 
-inline void cigint_bit_reverse_ref(Cigint *a) {
+void cigint_bit_reverse_ref(Cigint *a) {
 	u32 *start = a->data;
 	u32 *end = a->data + CIGINT_N - 1;
 	while (start < end) {
@@ -225,7 +229,7 @@ inline void cigint_bit_reverse_ref(Cigint *a) {
 	}
 }
 
-inline void cigint_bit_reverse_n_ref(Cigint *a, u32 n) {
+void cigint_bit_reverse_n_ref(Cigint *a, u32 n) {
 	for (u32 i = 0; i < n / 2; ++i) {
 		u32 j = n - 1 - i;
 		u32 bit_i = cigint_get_bit_ref(a, i);
@@ -237,25 +241,25 @@ inline void cigint_bit_reverse_n_ref(Cigint *a, u32 n) {
 	}
 }
 
-inline Cigint cigint_bit_reverse_n(FREF(Cigint) a, u32 n) {
+Cigint cigint_bit_reverse_n(FREF(Cigint) a, u32 n) {
 	cigint_bit_reverse_n_ref(&a, n);
 	return a;
 }
 
-inline Cigint cigint_bit_reverse_high(FREF(Cigint) a) {
+Cigint cigint_bit_reverse_high(FREF(Cigint) a) {
 	cigint_bit_reverse_n_ref(&a, cigint_highest_order(a));
 	return a;
 }
 
 // TODO: Write doc
-inline void cigint_and_ref(Cigint *lhs, const Cigint *rhs) {
+void cigint_and_ref(Cigint *lhs, const Cigint *rhs) {
 	for (size_t i = 0; i < CIGINT_N; ++i) {
 		lhs->data[i] &= rhs->data[i];
 	}
 }
 
 // TODO: Write doc
-inline Cigint cigint_and(Cigint lhs, CFREF(Cigint) rhs) {
+Cigint cigint_and(Cigint lhs, CFREF(Cigint) rhs) {
 	cigint_and_ref(&lhs , &rhs);
 	return lhs;
 }
@@ -265,7 +269,7 @@ inline Cigint cigint_and(Cigint lhs, CFREF(Cigint) rhs) {
  * @param lhs Pointer to the left-hand operand; stores the result.
  * @param rhs Pointer to the right-hand operand.
  */
-inline void cigint_or_ref(Cigint *lhs, const Cigint *rhs) {
+void cigint_or_ref(Cigint *lhs, const Cigint *rhs) {
 	for (size_t i = 0; i < CIGINT_N; ++i) {
 		lhs->data[i] |= rhs->data[i];
 	}
@@ -277,19 +281,19 @@ inline void cigint_or_ref(Cigint *lhs, const Cigint *rhs) {
  * @param lhs Left-hand operand (copied before modification).
  * @param rhs Right-hand operand.
  */
-inline Cigint cigint_or(Cigint lhs, CFREF(Cigint) rhs) {
+Cigint cigint_or(Cigint lhs, CFREF(Cigint) rhs) {
 	cigint_or_ref(&lhs, &rhs);
 	return lhs;
 }
 
 // TODO: Write doc
-inline void cigint_not_ref(Cigint *a) {
+void cigint_not_ref(Cigint *a) {
 	for (size_t i = 0; i < CIGINT_N; ++i)
 		a->data[i] = ~a->data[i];
 }
 
 // TODO: Write doc
-inline Cigint cigint_not(Cigint a) {
+Cigint cigint_not(Cigint a) {
 	cigint_not_ref(&a);
 	return a;
 }
@@ -299,7 +303,7 @@ inline Cigint cigint_not(Cigint a) {
  * @param lhs Pointer to the left-hand operand; stores the result.
  * @param rhs Pointer to the right-hand operand.
  */
-inline void cigint_xor_ref(Cigint *lhs, const Cigint *rhs) {
+void cigint_xor_ref(Cigint *lhs, const Cigint *rhs) {
 	for (size_t i = 0; i < CIGINT_N; ++i) {
 		lhs->data[i] ^= rhs->data[i];
 	}
@@ -311,13 +315,13 @@ inline void cigint_xor_ref(Cigint *lhs, const Cigint *rhs) {
  * @param lhs Left-hand operand (copied before modification).
  * @param rhs Right-hand operand.
  */
-inline Cigint cigint_xor(Cigint lhs, CFREF(Cigint) rhs) {
+Cigint cigint_xor(Cigint lhs, CFREF(Cigint) rhs) {
 	cigint_xor_ref(&lhs, &rhs);
 	return lhs;
 }
 
 /* Two-phase, MSW-first left shift: limb move plus intra-word stitch. */
-inline Cigint cigint_shl(CFREF(Cigint) lhs, u32 amnt) {
+Cigint cigint_shl(CFREF(Cigint) lhs, u32 amnt) {
 	if (amnt == 0) return lhs;
 
 	const size_t limb_off = amnt / SIZEOF_U32;
@@ -343,7 +347,7 @@ inline Cigint cigint_shl(CFREF(Cigint) lhs, u32 amnt) {
 }
 
 /* Two-phase, MSW-first right shift: limb move plus intra-word stitch */
-inline Cigint cigint_shr(CFREF(Cigint) lhs, u32 amnt) {
+Cigint cigint_shr(CFREF(Cigint) lhs, u32 amnt) {
 	if (amnt == 0) return lhs;
 	const size_t limb_off = amnt / SIZEOF_U32;
 	const u32 bits = amnt % SIZEOF_U32;
@@ -365,7 +369,7 @@ inline Cigint cigint_shr(CFREF(Cigint) lhs, u32 amnt) {
 	return r;
 }
 
-static inline u32 cigint_highest_order_ref(const Cigint *num) {
+u32 cigint_highest_order_ref(const Cigint *num) {
 	for (size_t i = 0; i < CIGINT_N; ++i) {
 		if (num->data[i] > 0) {
 			return u1_highest_order(num->data[i]) + (CIGINT_N - i - 1) * SIZEOF_U32;
@@ -374,11 +378,11 @@ static inline u32 cigint_highest_order_ref(const Cigint *num) {
 	return 0;
 }
 
-inline u32 cigint_highest_order(CFREF(Cigint) num) {
+u32 cigint_highest_order(CFREF(Cigint) num) {
 	return cigint_highest_order_ref(&num);
 }
 
-inline Cigint cigint_pow2(u32 amnt) {
+Cigint cigint_pow2(u32 amnt) {
 	assert(amnt < CIGINT_N * SIZEOF_U32);
 	Cigint r = CIGINT_ZERO();
 	size_t limb = CIGINT_N - 1 - (amnt / SIZEOF_U32);
@@ -386,7 +390,7 @@ inline Cigint cigint_pow2(u32 amnt) {
 	return r;
 }
 
-static inline int cigint_cmp_ref(const Cigint *lhs, const Cigint *rhs) {
+int cigint_cmp_ref(const Cigint *lhs, const Cigint *rhs) {
 	for (size_t i = 0; i < CIGINT_N; ++i) {
 		if (lhs->data[i] != rhs->data[i]) {
 			return lhs->data[i] > rhs->data[i] ? 1 : -1;
@@ -395,21 +399,21 @@ static inline int cigint_cmp_ref(const Cigint *lhs, const Cigint *rhs) {
 	return 0;
 }
 
-inline int cigint_cmp(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
+int cigint_cmp(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
 	return cigint_cmp_ref(&lhs, &rhs);
 }
 
-static inline int cigint_is0_ref(const Cigint *a) {
+int cigint_is0_ref(const Cigint *a) {
 	for (size_t i = 0; i < CIGINT_N; ++i)
 		if (a->data[i] != 0) return 0;
 	return 1;
 }
 
-inline int cigint_is0(CFREF(Cigint) a) {
+int cigint_is0(CFREF(Cigint) a) {
 	return cigint_is0_ref(&a);
 }
 
-static inline void cigint_add_ref(Cigint *lhs, const Cigint *rhs) {
+void cigint_add_ref(Cigint *lhs, const Cigint *rhs) {
 	u64 sum = 0;
 	for (size_t i = CIGINT_N; i-- > 0;) {
 		sum = (u64) lhs->data[i] + (u64) rhs->data[i] + (sum >> SIZEOF_U32);
@@ -417,12 +421,12 @@ static inline void cigint_add_ref(Cigint *lhs, const Cigint *rhs) {
 	}
 }
 
-inline Cigint cigint_add(Cigint lhs, CFREF(Cigint) rhs) {
+Cigint cigint_add(Cigint lhs, CFREF(Cigint) rhs) {
 	cigint_add_ref(&lhs, &rhs);
 	return lhs;
 }
 
-static inline void cigint_sub_ref(Cigint *lhs, const Cigint *rhs) {
+void cigint_sub_ref(Cigint *lhs, const Cigint *rhs) {
 	u64 borrow = 0;
 	for (size_t i = CIGINT_N; i-- > 0;) {
 		u64 a = lhs->data[i];
@@ -432,27 +436,105 @@ static inline void cigint_sub_ref(Cigint *lhs, const Cigint *rhs) {
 	}
 }
 
-inline Cigint cigint_sub(Cigint lhs, CFREF(Cigint) rhs) {
+Cigint cigint_sub(Cigint lhs, CFREF(Cigint) rhs) {
 	cigint_sub_ref(&lhs, &rhs);
 	return lhs;
 }
 
-static inline void cigint_mul_ref(Cigint *lhs, const Cigint *rhs) {
+void cigint_mul_ref_old(Cigint *lhs, Cigint *rhs) {
+	Cigint res = CIGINT_ZERO();
+	while (!cigint_is0_ref(rhs)) {
+		if (u1_get_bit(rhs->data[CIGINT_N - 1], 0) == 1) {
+			cigint_add_ref(&res, lhs);
+		}
+		*lhs = cigint_shl(*lhs, 1);
+		*rhs = cigint_shr(*rhs, 1);
+	}
+	*lhs = res;
+}
+
+Cigint cigint_mul_old(Cigint lhs, Cigint rhs) {
+	Cigint res = CIGINT_ZERO();
+	while (!cigint_is0(rhs)) {
+		if (u1_get_bit(rhs.data[CIGINT_N - 1], 0) == 1) {
+			cigint_add(res, lhs);
+		}
+		lhs = cigint_shl(lhs, 1);
+		rhs = cigint_shr(rhs, 1);
+	}
+	return lhs;
+}
+
+void cigint_mul_ref(Cigint *lhs, const Cigint *rhs) {
 	Cigint tmp = CIGINT_ZERO();
 	u64 carry = 0;
 
 	for (size_t k = 0; k < CIGINT_N; ++k) {
 		u64 acc = carry;
 		for (size_t i = 0; i <= k; ++i) {
+			// printf("acc-b: %llu\n", acc);
 			acc += (u64) lhs->data[CIGINT_N - 1 - i] * (u64) rhs->data[CIGINT_N - 1 - (k - i)];
+			// printf("acc-a: %llu\n", acc);
 		}
-		tmp.data[CIGINT_N - 1 - k] = (uint32_t) acc;
+		tmp.data[CIGINT_N - 1 - k] = (u32) acc;
 		carry = acc >> SIZEOF_U32;
+		// printf("Carry: %llu\n", carry);
+	}
+
+	if (carry != 0) {
+		// printf("Carry: %llu\n", carry);
+		// fprintf(stderr, "Cigint overflow in multiplication: result truncated\n");
+		// assert(0 && "Cigint overflow – increase CIGINT_N or use dynamic bigint");
+	}
+
+	*lhs = tmp;
+}
+
+void cigint_mul_ref2(Cigint *lhs, const Cigint *rhs) {
+	Cigint tmp = CIGINT_ZERO();
+	__uint128_t carry = 0;
+
+	for (size_t k = 0; k < CIGINT_N; ++k) {
+		__uint128_t acc = carry;
+		for (size_t i = 0; i <= k; ++i) {
+			acc += (__uint128_t)lhs->data[CIGINT_N - 1 - i]
+				 * (__uint128_t)rhs->data[CIGINT_N - 1 - (k - i)];
+		}
+		tmp.data[CIGINT_N - 1 - k] = (u32)acc;
+		carry = acc >> 32;
 	}
 	*lhs = tmp;
 }
 
-static inline void cigint_mul_refex(const Cigint *lhs, const Cigint *rhs, Cigint *res) {
+void cigint_mul_ref3(Cigint *lhs, const Cigint *rhs) {
+	Cigint tmp = CIGINT_ZERO();
+	u64 carry = 0;
+
+	// Loop from least significant position (rightmost index) to most (leftmost)
+	// But since data[0] is MSB, we reverse index order properly.
+	for (ssize_t k = CIGINT_N - 1; k >= 0; --k) {
+		u64 acc = carry;
+
+		// inner loop handles all digit pairs whose product contributes to position k
+		for (ssize_t i = CIGINT_N - 1; i >= k; --i) {
+			ssize_t j = (CIGINT_N - 1) - (i - k); // ensures i + j = k + (N-1)
+			if (j < 0 || j >= (ssize_t) CIGINT_N) continue;
+			acc += (u64)lhs->data[i] * (u64)rhs->data[j];
+		}
+
+		tmp.data[k] = (u32)acc;
+		carry = acc >> 32;
+	}
+
+	if (carry != 0) {
+		// fprintf(stderr, "Cigint overflow in multiplication: result truncated\n");
+		// assert(0 && "Cigint overflow – increase CIGINT_N or use dynamic bigint");
+	}
+
+	*lhs = tmp;
+}
+
+void cigint_mul_refex(const Cigint *lhs, const Cigint *rhs, Cigint *res) {
 	u64 carry = 0;
 	for (size_t k = 0; k < CIGINT_N; ++k) {
 		u64 acc = carry;
@@ -464,50 +546,63 @@ static inline void cigint_mul_refex(const Cigint *lhs, const Cigint *rhs, Cigint
 	}
 }
 
-inline Cigint cigint_mul(Cigint lhs, CFREF(Cigint) rhs) {
+Cigint cigint_mul(Cigint lhs, CFREF(Cigint) rhs) {
 	cigint_mul_ref(&lhs, &rhs);
 	return lhs;
 }
 
-static inline void cigint_sqr_ref(Cigint *base) {
-	Cigint tmp = CIGINT_ZERO();
-	for (size_t i = 0; i < CIGINT_N; ++i) {
-		for (size_t j = 0; j <= i; ++j) {
-			u64 p = (u64) base->data[i] * (u64) base->data[j];
-			if (i != j) p <<= 1; // double off-diagonal
-			size_t k = i + j;
-			if (k < CIGINT_N) {
-				u64 sum = (u64) tmp.data[k] + p;
-				tmp.data[k] = (u32) sum; // ignore overflow beyond 32/64 bits of out[k]
-			}
-		}
-	}
-	*base = tmp;
+void cigint_sqr_ref(Cigint *base) {
+	Cigint op = *base;
+	cigint_mul_ref(base, &op);
 }
 
-inline Cigint cigint_sqr(Cigint base) {
+Cigint cigint_sqr(Cigint base) {
 	cigint_sqr_ref(&base);
 	return base;
 }
 
-static inline void cigint_pow_ref(Cigint *base, u32 exp) {
-	Cigint res = CIGINT_ZERO();
-	res.data[CIGINT_N - 1] = 1;
+void cigint_pow_ref(Cigint *base, u32 exp) {
+	Cigint acc = CIGINT_ZERO();
+	acc.data[CIGINT_N - 1] = 1;
+	Cigint x = *base;
 	while (exp) {
-		if (exp & 1u) cigint_mul_ref(&res, base);
-		exp >>= 1;
-		if (!exp) break;
-		cigint_sqr_ref(base);
+		if (exp % 2 == 1)
+			acc = cigint_mul(acc, x);
+		x = cigint_mul(x, x);
+		exp >>= 1u;
+		// if (!exp) break;
 	}
-	*base = res;
+	*base = acc;
 }
 
-inline Cigint cigint_pow(Cigint base, u32 exp) {
+Cigint cigint_pow(Cigint base, u32 exp) {
 	cigint_pow_ref(&base, exp);
 	return base;
 }
 
-static inline Cigint cigint_from_u32(u32 x) {
+Cigint cigint_pow_v2(Cigint *base, u32 exp) {
+	Cigint res = CIGINT_ZERO();
+	res.data[CIGINT_N - 1] = 1;
+	for (size_t i = 0; i < exp; ++i) {
+		cigint_mul_ref(&res, base);
+	}
+	return res;
+}
+
+Cigint cigint_pow_v3(Cigint base, u32 exp) {
+	if (exp == 0) return cigint_from_u32(1);
+	Cigint res = cigint_pow_v3(base, exp / 2);
+	Cigint tmp = cigint_mul(res, res);
+	// cigint_printf("exp :%d\n", exp);
+	// cigint_printf("res :%Cd\n", res);
+	// cigint_printf("tmp :%Cd\n", tmp);
+	if (exp % 2 == 0) {
+		return tmp;
+	}
+	return cigint_mul(base, tmp);
+}
+
+Cigint cigint_from_u32(u32 x) {
 	Cigint tmp = CIGINT_ZERO();
 	tmp.data[CIGINT_N - 1] = x;
 	return tmp;
@@ -516,7 +611,7 @@ static inline Cigint cigint_from_u32(u32 x) {
 /* bitwise restoring long division
  * q,r can be NULL independent
  */
-static inline void cigint_divmod_ref(const Cigint *lhs, const Cigint *rhs, Cigint *q, Cigint *r) {
+void cigint_divmod_ref(const Cigint *lhs, const Cigint *rhs, Cigint *q, Cigint *r) {
 	assert(!cigint_is0_ref(rhs));
 	int cmp = cigint_cmp_ref(lhs, rhs);
 	if (cmp < 0) {
@@ -556,26 +651,26 @@ static inline void cigint_divmod_ref(const Cigint *lhs, const Cigint *rhs, Cigin
 	if (r) *r = rem;
 }
 
-inline void cigint_divmod(CFREF(Cigint) lhs, CFREF(Cigint) rhs, Cigint *q, Cigint *r) {
+void cigint_divmod(CFREF(Cigint) lhs, CFREF(Cigint) rhs, Cigint *q, Cigint *r) {
 	cigint_divmod_ref(&lhs, &rhs, q, r);
 }
 
 /* quotient only */
-inline Cigint cigint_div(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
+Cigint cigint_div(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
 	Cigint q;
 	cigint_divmod_ref(&lhs, &rhs, &q, NULL);
 	return q;
 }
 
 /* remainder only */
-inline Cigint cigint_mod(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
+Cigint cigint_mod(CFREF(Cigint) lhs, CFREF(Cigint) rhs) {
 	Cigint r;
 	cigint_divmod_ref(&lhs, &rhs, NULL, &r);
 	return r;
 }
 
 /* single-limb divisor, fixed version */
-static inline void cigint_sdivmod_ref(const Cigint *lhs, u32 rhs, Cigint *q, u32 *r) {
+void cigint_sdivmod_ref(const Cigint *lhs, u32 rhs, Cigint *q, u32 *r) {
 	assert(rhs != 0);
 	u64 rem = 0;
 	Cigint quo = CIGINT_ZERO();
@@ -594,11 +689,11 @@ static inline void cigint_sdivmod_ref(const Cigint *lhs, u32 rhs, Cigint *q, u32
 	if (r) *r = rem;
 }
 
-inline void cigint_sdivmod(CFREF(Cigint) lhs, const u32 rhs, Cigint *q, u32 *r) {
+void cigint_sdivmod(CFREF(Cigint) lhs, const u32 rhs, Cigint *q, u32 *r) {
 	cigint_sdivmod_ref(&lhs, rhs, q, r);
 }
 
-inline u32 cigint_print2(CFREF(Cigint) a) {
+u32 cigint_print2(CFREF(Cigint) a) {
 	u32 counter = printf("0b");
 	u32 ho = cigint_highest_order(a);
 	if (ho == 0) {
@@ -632,7 +727,7 @@ inline u32 cigint_print2(CFREF(Cigint) a) {
 // Each 10^8 chunk holds ~26.6 bits (log2(10^8) ≈ 26.6). So max chunks = ceil(total_bits / 26.6)
 #define CIGINT_PRINT10_CHUNKS ((CIGINT_N * SIZEOF_U32 + 26) / 27)
 
-inline u32 cigint_print10(CFREF(Cigint) a) {
+u32 cigint_print10(CFREF(Cigint) a) {
 	if (cigint_is0(a)) {
 		putchar('0');
 		return 1;
@@ -655,7 +750,7 @@ inline u32 cigint_print10(CFREF(Cigint) a) {
 	return counter;
 }
 
-static u32 cigint_print16_impl(CFREF(Cigint) a, int upper) {
+u32 cigint_print16_impl(CFREF(Cigint) a, int upper) {
 	u32 counter = 0;
 	counter += printf("0x");
 	size_t i = 0;
@@ -1028,7 +1123,7 @@ inline Cigint operator+(const Cigint &lhs, const Cigint &rhs) {
 	return cigint_add(lhs, rhs);
 }
 
-inline const Cigint &operator+=(Cigint &lhs, const Cigint &rhs) {
+inline const Cigint& operator+=(Cigint &lhs, const Cigint &rhs) {
 	cigint_add_ref(&lhs, &rhs);
 	return lhs;
 }
@@ -1039,7 +1134,7 @@ inline Cigint operator+(const Cigint &lhs, u32 rhs) {
 	return cigint_add(lhs, tmp);
 }
 
-inline const Cigint &operator+=(Cigint &lhs, u32 rhs) {
+inline const Cigint& operator+=(Cigint &lhs, u32 rhs) {
 	Cigint tmp = cigint_from_u32(rhs);
 	cigint_add_ref(&lhs, &tmp);
 	return lhs;
@@ -1067,7 +1162,7 @@ inline Cigint operator/(const Cigint &lhs, const Cigint &rhs) {
 	return cigint_div(lhs, rhs);
 }
 
-inline const Cigint &operator/=(Cigint &lhs, const Cigint &rhs) {
+inline const Cigint& operator/=(Cigint &lhs, const Cigint &rhs) {
 	lhs = cigint_div(lhs, rhs);
 	return lhs;
 }
